@@ -1,1 +1,1 @@
-# CLIA: Building An Efficient Minimalist CLI AI Agent
+# CLIA: An Efficient Minimalist CLI AI Agent
