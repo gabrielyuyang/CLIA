@@ -1,5 +1,6 @@
 import os
 import sys
+from utils import to_bool
 from dotenv import load_dotenv
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,9 +15,10 @@ if root not in sys.path:
 @dataclass
 class Settings:
     api_key: str
-    url_base: str
+    base_url: str
     model: str
     temperature: float
+    stream: bool
     max_tokens: int
     timeout_seconds: int
     max_retries: int
@@ -37,12 +39,13 @@ class Settings:
             raise ValueError('OPENAI_API_KEY not set')
         return cls(
             api_key=api_key,
-            url_base=os.getenv('OPENAI_URL_BASE', 'https://api.openai.com/v1'),
+            base_url=os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
             model=os.getenv('OPENAI_MODEL', 'glm-4.6'),
+            stream=to_bool(os.getenv('OPENAI_STREAM', 'False')),
             temperature=float(os.getenv('OPENAI_TEMPERATURE', 0.0)),
             max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', 4096)),
+            max_retries=int(os.getenv('OPENAI_MAX_RETRIES', 5)),
             timeout_seconds=int(os.getenv('OPENAI_TIMEOUT_SECONDS', 30)),
-            max_retries=int(os.getenv('OPENAI_MAX_RETRIES', 10)),
             top_p=float(os.getenv('OPENAI_TOP_P', 7)),
             frequency_penalty=float(os.getenv('OPENAI_FREQUENCY_PENALTY', 0))
         )
