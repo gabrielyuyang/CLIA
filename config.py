@@ -1,10 +1,15 @@
 import os
+import sys
 from dotenv import load_dotenv
 from dataclasses import dataclass
-from typing import List, Dict
+from pathlib import Path
 
 
 load_dotenv()
+root = Path(__name__).parent.parent
+if root not in sys.path:
+    sys.path.insert(0, str(root))
+
 
 @dataclass
 class Settings:
@@ -32,7 +37,7 @@ class Settings:
             raise ValueError('OPENAI_API_KEY not set')
         return cls(
             api_key=api_key,
-            url_base=os.getenv('OPENAI_Base_URL', 'https://api.openai.com/v1'),
+            url_base=os.getenv('OPENAI_URL_BASE', 'https://api.openai.com/v1'),
             model=os.getenv('OPENAI_MODEL', 'glm-4.6'),
             temperature=float(os.getenv('OPENAI_TEMPERATURE', 0.0)),
             max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', 4096)),
