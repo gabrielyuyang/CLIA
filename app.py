@@ -25,22 +25,25 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    print('-' * 28)
+    print("Welcome to the CLI AI Agent")
+    print('-' * 28 + '\n')
     args = parse_args()
-    logger.info(f"User Query: {args}\n\n")
+    logger.info(f"User Query:\n{args}\n")
 
     settings = Settings.load_openai()
-    logger.info(f"Initial Settings: {settings}\n\n")
+    logger.info(f"Initial Settings:\n{settings}\n")
     model = args.model or settings.model
     stream = to_bool(args.stream) or settings.stream
     temperature = float(args.temperature) or settings.temperature
     top_p = float(args.top_p) or settings.top_p
     max_retries = int(args.max_retries) or settings.max_retries
     logger.info(
-        f"Final Settings: model={model},\
+        f"Final Settings:\nmodel={model},\
         stream={stream},\
         temperature={temperature},\
         top_p={top_p},\
-        max_retries={max_retries}\n\n"
+        max_retries={max_retries}\n"
         )
 
     client = llm.openai_client(
@@ -61,7 +64,8 @@ if __name__ == "__main__":
             "content": args.question
         }
     ]
-    logger.info(f"Message: {message}\n\n")
+    logger.info(f"Message:\n{message}")
+    print('-' * 28 + '\n')
 
     response = client.chat.completions.create(
         model=model,
@@ -74,16 +78,17 @@ if __name__ == "__main__":
         timeout=settings.timeout_seconds
         )
 
+    full_response = []
     if not stream:
-        logger.info(f"Response: {response.choices[0].message.content}\n\n")
+        full_response.append(response.choices[0].message.content)
+        logger.info(f"Response:\n{''.join(full_response)}")
     else:
-        full_response = []
         for chunk in response:
             if chunk.choices[0].delta.content:
                 print(chunk.choices[0].delta.content, end="", flush=True)
                 full_response.append(chunk.choices[0].delta.content)
-        print('\n\n')
-        logger.info(f"Response: {''.join(full_response)}\n\n")
+        print('\n' + '-' * 28 + '\n')
+        logger.info(f"Response:\n{''.join(full_response)}")
 
     if args.history:
         history = History(
@@ -91,7 +96,7 @@ if __name__ == "__main__":
                 message[-1],
                 {
                     "role": "assistant",
-                    "content": response.choices[0].message.content
+                    "content": full_response
                 }
             ]
         )
