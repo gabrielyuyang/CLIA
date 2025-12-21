@@ -1,17 +1,12 @@
-from agents import llm
+from agents import llm, prompts
+from agents.history import History
+from pathlib import Path
 from config import Settings
 from utils import to_bool
 import argparse
-import logging
+import logger
 
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-
-logger = logging.getLogger(__name__)
+logger = logger.logger
 
 
 def parse_args() -> argparse.Namespace:
@@ -24,6 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--top_p', default=None, help="Top P to override the default")
     parser.add_argument('--max_retries', default=None, help="Max retries to override the default")
     parser.add_argument('--format', '-f', choices=['markdown', 'json', 'text'], default='markdown', help="Format of the answer")
+    parser.add_argument('--history', default=None, help="Designate the history file")
 
     return parser.parse_args()
 
@@ -52,7 +48,19 @@ if __name__ == "__main__":
         base_url=settings.base_url,
         max_retries=max_retries
         )
-    message = [{"role": "user", "content": args.question}]
+
+    system_prompt, few_shorts = prompts.get_prompt(args.task)
+    message = [
+        {
+            "role": "system",
+            "content": system_prompt
+        },
+        *few_shorts,
+        {
+            "role": "user",
+            "content": args.question
+        }
+    ]
     logger.info(f"Message: {message}")
 
     response = client.chat.completions.create(
@@ -61,5 +69,20 @@ if __name__ == "__main__":
         stream=stream,
         temperature=temperature,
         top_p=top_p,
+        frequency_penalty=settings.frequency_penalty,
+        max_tokens=settings.max_tokens,
+        timeout=settings.timeout_seconds
         )
     logger.info(f"Response: {response.choices[0].message.content}")
+
+    if args.history:
+        history = History(
+            [
+                message[-1],
+                {
+                    "role": "assistant",
+                    "content": response.choices[0].message.content
+                }
+            ]
+        )
+        history.save_jsonl(Path(args.history))
