@@ -1,11 +1,11 @@
 from typing import List, Dict, Literal
 from pathlib import Path
-import logger
+import logging
 import json
 
 Role = Literal["system", "user", "assistant"]
 Message = List[Dict[Role, str]]
-logger = logger.logger
+logger = logging.getLogger(__name__)
 
 
 class History:
@@ -18,6 +18,7 @@ class History:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open('a', encoding='utf-8') as f:
+            print(self._messages)
             f.write(
                 '\n'.join([json.dumps(msg, ensure_ascii=False)
                            for msg in self._messages])
