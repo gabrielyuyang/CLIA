@@ -1,8 +1,9 @@
-# CLIA命令行工具实现方案
+# CLIA命令行工具实现与使用说明
 
 ## 🎯 目标
 
-让CLIA能够直接在terminal中运行：
+让CLIA直接在terminal中运行：
+
 ```bash
 clia -q "五色花朵该怎么培育？" -t general
 ```
@@ -12,6 +13,7 @@ clia -q "五色花朵该怎么培育？" -t general
 ### 1. 创建包安装配置
 
 #### setup.py 文件
+
 ```python
 """
 CLIA - An Efficient Minimalist CLI AI Agent
@@ -62,10 +64,11 @@ setup(
 )
 ```
 
-### 2. 重构项目结构
+### 2. 项目结构设定
 
-#### 新的目录结构
-```
+#### 目录结构
+
+```Bash
 clia/
 ├── setup.py                    # 包安装配置
 ├── requirements.txt             # 依赖列表
@@ -89,6 +92,7 @@ clia/
 ### 3. 创建包初始化文件
 
 #### clia/__init__.py
+
 ```python
 """
 CLIA - An Efficient Minimalist CLI AI Agent
@@ -106,9 +110,27 @@ from .config import Settings
 __all__ = ["main", "Settings", "__version__"]
 ```
 
+#### agents/__init__.py
+
+```python
+"""
+CLIA Agents Module
+
+This module provides the core agent functionality including LLM integration,
+prompt management, and conversation history.
+"""
+
+from .llm import openai_client
+from .prompts import get_prompt
+from .history import History
+
+__all__ = ["openai_client", "get_prompt", "History"]
+```
+
 ### 4. 创建命令行入口
 
 #### clia/main.py
+
 ```python
 #!/usr/bin/env python3
 """
@@ -342,9 +364,8 @@ if __name__ == "__main__":
     main()
 ```
 
-### 5. 更新现有模块
+#### config.py
 
-#### 更新 config.py
 ```python
 import os
 import sys
@@ -355,12 +376,6 @@ from .utils import to_bool
 
 # 加载环境变量
 load_dotenv()
-
-# 确保包根目录在Python路径中
-package_root = Path(__file__).parent.parent
-if str(package_root) not in sys.path:
-    sys.path.insert(0, str(package_root))
-
 
 @dataclass
 class Settings:
@@ -398,28 +413,13 @@ class Settings:
         )
 ```
 
-#### 更新 agents/__init__.py
-```python
-"""
-CLIA Agents Module
-
-This module provides the core agent functionality including LLM integration,
-prompt management, and conversation history.
-"""
-
-from .llm import openai_client
-from .prompts import get_prompt
-from .history import History
-
-__all__ = ["openai_client", "get_prompt", "History"]
-```
-
 ## 🚀 安装和使用步骤
 
 ### 1. 开发环境安装
+
 ```bash
 # 在项目根目录下
-cd 大模型/clia
+cd Path/clia
 
 # 安装为可编辑包
 pip install -e .
@@ -429,6 +429,7 @@ python setup.py develop
 ```
 
 ### 2. 生产环境安装
+
 ```bash
 # 从GitHub安装
 pip install git+https://github.com/your-repo/clia.git
@@ -438,6 +439,7 @@ pip install clia
 ```
 
 ### 3. 配置环境变量
+
 ```bash
 # 复制环境变量模板
 cp .env.example .env
@@ -449,6 +451,7 @@ cp .env.example .env
 ```
 
 ### 4. 使用命令
+
 ```bash
 # 基础用法
 clia "五色花朵该怎么培育？" -t general
@@ -475,6 +478,7 @@ clia "修复这个bug" -t fix --quiet
 ## 🔧 高级配置
 
 ### 自定义配置文件
+
 ```bash
 # 使用自定义配置文件
 export CLIA_CONFIG_PATH=/path/to/config.yaml
@@ -482,6 +486,7 @@ clia "你的问题"
 ```
 
 ### 多模型支持
+
 ```bash
 # 使用不同模型
 clia "你的问题" --model=gpt-4
@@ -492,7 +497,8 @@ clia "你的问题" --model=claude-3-sonnet
 
 ### 常见问题
 
-1. **命令未找到**
+1. __命令未找到__
+
    ```bash
    # 确保已正确安装
    pip install -e .
@@ -501,7 +507,8 @@ clia "你的问题" --model=claude-3-sonnet
    echo $PATH | grep python
    ```
 
-2. **API密钥错误**
+2. __API密钥错误__
+
    ```bash
    # 检查环境变量
    echo $OPENAI_API_KEY
@@ -510,7 +517,8 @@ clia "你的问题" --model=claude-3-sonnet
    source ~/.bashrc  # 或 ~/.zshrc
    ```
 
-3. **模块导入错误**
+3. __模块导入错误__
+
    ```bash
    # 重新安装包
    pip uninstall clia
@@ -520,6 +528,7 @@ clia "你的问题" --model=claude-3-sonnet
 ## 📋 测试
 
 ### 单元测试
+
 ```bash
 # 运行测试
 python -m pytest tests/
@@ -529,6 +538,7 @@ python -m pytest tests/test_clia.py::test_main
 ```
 
 ### 集成测试
+
 ```bash
 # 测试命令行接口
 clia "测试问题" -t general --verbose
@@ -543,6 +553,7 @@ done
 ## 📦 发布准备
 
 ### 构建包
+
 ```bash
 # 构建源码包和wheel包
 python setup.py sdist bdist_wheel
@@ -552,6 +563,7 @@ twine check dist/*
 ```
 
 ### 发布到PyPI
+
 ```bash
 # 上传到测试PyPI
 twine upload --repository testpypi dist/*
@@ -561,5 +573,3 @@ twine upload dist/*
 ```
 
 ---
-
-这个实现方案将让你的CLIA成为一个真正的命令行工具，用户可以直接在terminal中使用 `clia` 命令。
