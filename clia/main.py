@@ -1,14 +1,14 @@
 import argparse
 import sys
 from pathlib import Path
-
+from typing import Tuple
 from .config import Settings
 from .agents import llm, prompts
 from .agents.history import History
 from .utils import get_multiline_input
 import logging
 
-COMMANDS = ('answer', 'explain', 'debug', 'fix', 'genarate')
+COMMANDS = ('ask', 'explain', 'debug', 'fix', 'genarate')
 
 # 配置日志
 logging.basicConfig(
@@ -28,89 +28,16 @@ def create_parser() -> argparse.ArgumentParser:
 Examples: to-do
   """
     )
-
-    # 添加默认参数
-    parser.add_argument(
-        'question',
-        nargs='*',
-        help='Question to ask the AI Agent')
-
-    parser.add_argument(
-        '--multiline', '-m',
-        action='store_true',
-        help='Enable multiline input')
-
-    parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Enable verbose mode'
-    )
-
-    parser.add_argument(
-        '-f', '--format',
-        choices=['markdown', 'json', 'text'],
-        default='markdown',
-        help='Output format (default: markdown)'
-    )
-
-    # 模型参数
-    parser.add_argument(
-        '--model',
-        help='Model to override the default'
-    )
-
-    parser.add_argument(
-        '--temperature',
-        type=float,
-        help='Temperature to override the default'
-    )
-
-    parser.add_argument(
-        '--top_p',
-        type=float,
-        help='Top P to override the default'
-    )
-
-    parser.add_argument(
-        '--max_retries',
-        type=int,
-        help='Max retries to override the default'
-    )
-
-    # 输出控制
-    parser.add_argument(
-        '--stream',
-        action='store_true',
-        help='Enable streaming output'
-    )
-
-    parser.add_argument(
-        '--quiet',
-        action='store_true',
-        help='Suppress non-essential output'
-    )
-
-    # 历史记录
-    parser.add_argument(
-        '--history',
-        help='Path to save conversation history'
-    )
-
-    parser.add_argument(
-        '--no-history',
-        action='store_true',
-        help='Disable history saving'
-    )
     return parser
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args() -> argparse.ArgumentParser:
     parser = create_parser()
-    sub_parsers = parser.add_subparsers(dest='command', required=False)
+    sub_parsers = parser.add_subparsers(dest='command', required=True)
 
-    # answer命令
+    # ask命令
     sub_parsers.add_parser(
-        'answer',
+        'ask',
         help='A Routine Q&A Assistant for General Tasks'
     )
 
@@ -137,6 +64,81 @@ def parse_args() -> argparse.Namespace:
         'generate',
         help='Generate codes'
     )
+    
+    # 添加通用参数
+    for command_parser in sub_parsers.choices.values():
+        # 默认参数
+        command_parser.add_argument(
+            'question',
+            nargs='*',
+            help='Question to ask the AI Agent')
+
+        command_parser.add_argument(
+            '--multiline', '-m',
+            action='store_true',
+            help='Enable multiline input with \'EOF\' as endding')
+
+        command_parser.add_argument(
+            '--verbose', '-v',
+            action='store_true',
+            help='Enable verbose mode'
+        )
+
+        command_parser.add_argument(
+            '--format',
+            choices=['markdown', 'json', 'text'],
+            default='markdown',
+            help='Output format (default: markdown)'
+        )
+
+        # 模型参数
+        command_parser.add_argument(
+            '--model',
+            help='Model to override the default'
+        )
+
+        command_parser.add_argument(
+            '--temperature',
+            type=float,
+            help='Temperature to override the default'
+        )
+
+        command_parser.add_argument(
+            '--top_p',
+            type=float,
+            help='Top P to override the default'
+        )
+
+        command_parser.add_argument(
+            '--max_retries',
+            type=int,
+            help='Max retries to override the default'
+        )
+
+        # 输出控制
+        command_parser.add_argument(
+            '--stream',
+            action='store_true',
+            help='Enable streaming output'
+        )
+
+        command_parser.add_argument(
+            '--quiet',
+            action='store_true',
+            help='Suppress non-essential output'
+        )
+
+        # 历史记录
+        command_parser.add_argument(
+            '--history',
+            help='Path to save conversation history'
+        )
+
+        command_parser.add_argument(
+            '--no-history',
+            action='store_true',
+            help='Disable history saving'
+        )
     return parser.parse_args()
 
 
@@ -144,13 +146,8 @@ def main():
     """Main entry point for the CLI application."""
     try:
         args = parse_args()
-        print(args)
-
-        if not args.command:
-            args.command = 'answer'
 
         if args.multiline:
-            print('++++entering')
             question = ' '.join(args.question) + '\n' + get_multiline_input()
         else:
             question = ' '.join(args.question)
