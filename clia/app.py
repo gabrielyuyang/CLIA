@@ -6,6 +6,7 @@ from utils import to_bool
 import argparse
 import logger
 
+
 logger = logger.logger
 
 
@@ -25,7 +26,7 @@ Examples:
   """
     )
     return parser
-        
+
 
 def parse_args() -> argparse.Namespace:
     parser = create_parser()
@@ -37,78 +38,78 @@ def parse_args() -> argparse.Namespace:
     # parser.add_argument('--top_p', default=0.85, help="Top P to override the default")
     # parser.add_argument('--max_retries', default=5, help="Max retries to override the default")
     # parser.add_argument('--format', '-f', choices=['markdown', 'json', 'text'], default='markdown', help="Format of the answer")
-    # parser.add_argument('--history', default=None, help="Designate the history file")   
-    
+    # parser.add_argument('--history', default=None, help="Designate the history file")
+
     # 主要参数
     parser.add_argument(
-        'question', 
+        'question',
         nargs='+',
         help='Question to ask the AI Agent'
     )
-    
+
     parser.add_argument(
         '-t', '--task',
         choices=['general', 'explain', 'generate', 'debug', 'fix'],
         default='general',
         help='Task type to perform (default: general)'
     )
-    
+
     parser.add_argument(
         '-f', '--format',
         choices=['markdown', 'json', 'text'],
         default='markdown',
         help='Output format (default: markdown)'
     )
-    
+
     # 模型参数
     parser.add_argument(
         '--model',
         help='Model to override the default'
     )
-    
+
     parser.add_argument(
         '--temperature',
         type=float,
         help='Temperature to override the default'
     )
-    
+
     parser.add_argument(
         '--top_p',
         type=float,
         help='Top P to override the default'
     )
-    
+
     parser.add_argument(
         '--max_retries',
         type=int,
         help='Max retries to override the default'
     )
-    
+
     # 输出控制
     parser.add_argument(
         '--stream',
         action='store_true',
         help='Enable streaming output'
     )
-    
+
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
         help='Enable verbose output'
     )
-    
+
     parser.add_argument(
         '--quiet', '-q',
         action='store_true',
         help='Suppress non-essential output'
     )
-    
+
     # 历史记录
     parser.add_argument(
         '--history',
         help='Path to save conversation history'
     )
-    
+
     parser.add_argument(
         '--no-history',
         action='store_true',

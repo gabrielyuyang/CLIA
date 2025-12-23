@@ -1,7 +1,6 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import Tuple
 from .config import Settings
 from .agents import llm, prompts
 from .agents.history import History
@@ -64,7 +63,7 @@ def parse_args() -> argparse.ArgumentParser:
         'generate',
         help='Generate codes'
     )
-    
+
     # 添加通用参数
     for command_parser in sub_parsers.choices.values():
         # 默认参数
@@ -162,7 +161,7 @@ def main():
         if not args.quiet:
             print('-' * 28)
             print("Welcome to CLI AI Agent")
-            print('-' * 28)
+            print('-' * 28 + '\n')
 
         logger.info(f"User Query: {question}")
 
@@ -192,7 +191,8 @@ def main():
             {"role": "user", "content": question}
         ]
 
-        logger.info(f"Messages prepared for {args.command} command: {messages}")
+        logger.info(
+            f"Messages prepared for {args.command} command: {messages}")
 
         # 调用LLM API
         response = client.chat.completions.create(
@@ -213,11 +213,15 @@ def main():
             # 非流式输出
             content = response.choices[0].message.content
             full_response.append(content)
-            print(content)
+
+            if not args.quiet:
+                print('-' * 28 + '\n')
+                print(content)
+                print('-' * 28 + '\n')
         else:
             # 流式输出
             if not args.quiet:
-                print('-' * 28)
+                print('-' * 28 + '\n')
 
             for chunk in response:
                 if chunk.choices and chunk.choices[0].delta.content:
@@ -226,7 +230,7 @@ def main():
                     full_response.append(content)
 
             if not args.quiet:
-                print('\n' + '-' * 28)
+                print('-' * 28 + '\n')
 
         # 保存历史记录
         if not args.no_history and args.history:
