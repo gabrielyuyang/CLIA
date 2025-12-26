@@ -2,8 +2,8 @@ from typing import Dict, List, Tuple
 Prompt = Tuple[str, List[Dict]]
 
 
-PROMPT_LIBRASY: Dict[str, Prompt] = {
-    "general": (
+PROMPT_LIB: Dict[str, Prompt] = {
+    "ask": (
         """
         你是一个简洁可靠的命令行 AI 助手，回答问题并给出代码片段。
             要求：
@@ -21,6 +21,18 @@ PROMPT_LIBRASY: Dict[str, Prompt] = {
                 "content": "可以用递归或迭代，这里给出迭代以避免栈溢出：\n```python\ndef fib(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n```",
             },
         ]
+    ),
+    "draft": (
+        """
+        你是一个软件spec驱动开发助手, 分析用户给出的spec规范, 并给出对应代码实现。
+        要求：
+        - 先列出可能需要的模块、以及文件和目录结构，然后给出对应的代码实现。
+        - 如果缺少上下文，说明需要的额外信息。
+        - 优先根据用户提供的所有spec规范, 给出满足所有需求的最小实现。
+        - 在实现的过程中, 同步测试和校正代码, 确保满足所有spec规范。
+        - 如果用户提供的是大型软件的spec规范, 仅给出模块、文件和目录结构, 不要给出具体的代码实现。并提示用户, 请使用clia draft命令, 以spec驱动的方式先实现模块, 逐步实现整个软件。
+        """,
+        [],
     ),
     "explain": (
         """
@@ -65,4 +77,4 @@ PROMPT_LIBRASY: Dict[str, Prompt] = {
 
 def get_prompt(task: str) -> Prompt:
     """Return (system_prompt, few_shots) for given task, or fallback to gerneral when not matched."""
-    return PROMPT_LIBRASY.get(task, PROMPT_LIBRASY["general"])
+    return PROMPT_LIB.get(task)

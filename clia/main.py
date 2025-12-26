@@ -34,38 +34,40 @@ def parse_args() -> argparse.ArgumentParser:
     parser = create_parser()
     sub_parsers = parser.add_subparsers(dest='command', required=True)
 
-    # ask命令
-    sub_parsers.add_parser(
-        'ask',
-        help='A Routine Q&A Assistant for General Tasks'
-    )
+    PARSER_DICT= {
+        # ask命令
+        'ask_parser': sub_parsers.add_parser(
+            'ask', help='A Routine Q&A Assistant for General Tasks'
+            ),
+        
+        # draft命令
+        'draft_parser': sub_parsers.add_parser(
+            'draft', help='Parse user spec'
+            ),
 
-    # explain命令
-    sub_parsers.add_parser(
-        'explain',
-        help='Explain codes'
-    )
-
-    # debug命令
-    sub_parsers.add_parser(
-        'debug',
-        help='Debug codes'
-    )
-
-    # fix命令
-    sub_parsers.add_parser(
-        'fix',
-        help='Fix codes'
-    )
-
-    # generate命令
-    sub_parsers.add_parser(
-        'generate',
-        help='Generate codes'
-    )
+        # explain命令
+        'explain_parser': sub_parsers.add_parser(
+            'explain', help='Explain codes'
+        ),
+        
+        # debug命令
+        'debug_parser': sub_parsers.add_parser(
+            'debug', help='Debug codes'
+        ),
+        
+        # fix命令
+        'fix_parser': sub_parsers.add_parser(
+            'fix', help='Fix codes'
+        ),
+        
+        # generate命令
+        'generate_parser': sub_parsers.add_parser(
+            'generate', help='Generate codes'
+        )
+    }
 
     # 添加通用参数
-    for command_parser in sub_parsers.choices.values():
+    for command_parser in PARSER_DICT.values():
         # 默认参数
         command_parser.add_argument(
             'question',
@@ -82,12 +84,11 @@ def parse_args() -> argparse.ArgumentParser:
             action='store_true',
             help='Enable verbose mode'
         )
-
+        
         command_parser.add_argument(
-            '--format',
-            choices=['markdown', 'json', 'text'],
-            default='markdown',
-            help='Output format (default: markdown)'
+            '--file',
+            type=Path,
+            help='Path to the file for codes or specs'
         )
 
         # 模型参数
@@ -137,6 +138,28 @@ def parse_args() -> argparse.ArgumentParser:
             '--no-history',
             action='store_true',
             help='Disable history saving'
+        )
+        
+        # 输出格式
+        command_parser.add_argument(
+            '--output-format',
+            choices=['markdown', 'json', 'text'],
+            default='markdown',
+            help='Output format (default: markdown)'
+        )
+        
+        # 校准模式
+        command_parser.add_argument(
+            '--with-calibration',
+            action='store_true',
+            help='Enable calibration mode'
+        )
+
+        # 输入模式
+        command_parser.add_argument(
+            '--with-interaction',
+            action='store_true',
+            help='Enable interaction mode'
         )
     return parser.parse_args()
 
@@ -230,7 +253,7 @@ def main():
                     full_response.append(content)
 
             if not args.quiet:
-                print('-' * 28 + '\n')
+                print('\n' + '-' * 28 + '\n')
 
         # 保存历史记录
         if not args.no_history and args.history:
