@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from .config import Settings
 from .agents import llm, prompts
+from .agents.plan_execute_agent import plan_execute
 from .agents.history import History
 from .utils import get_multiline_input
 import logging
@@ -199,35 +200,21 @@ def main():
         top_p = args.top_p or settings.top_p
         max_retries = args.max_retries or settings.max_retries
 
-        # 创建LLM客户端
-        client = llm.openai_client(
-            api_key=settings.api_key,
-            base_url=settings.base_url,
-            max_retries=max_retries
-        )
-
-        # 获取任务特定的prompt
-        system_prompt, few_shots = prompts.get_prompt(args.command)
-        messages = [
-            {"role": "system", "content": system_prompt},
-            *few_shots,
-            {"role": "user", "content": question}
-        ]
-
-        logger.info(
-            f"Messages prepared for {args.command} command: {messages}")
-
-        # 调用LLM API
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=stream,
-            temperature=temperature,
-            top_p=top_p,
-            frequency_penalty=settings.frequency_penalty,
-            max_tokens=settings.max_tokens,
-            timeout=settings.timeout_seconds
-        )
+        # TO-DO: 添加支持with_calibration参数
+        response = plan_execute(question=question,
+                                command=args.command,
+                                max_steps=5,
+                                api_key=settings.api_key,
+                                base_url=settings.base_url,
+                                max_retries=max_retries,
+                                model=model,
+                                stream=stream,
+                                temperature=temperature,
+                                top_p=top_p,
+                                frequency_penalty=settings.frequency_penalty,
+                                max_tokens=settings.max_tokens,
+                                timeout=settings.timeout,
+                                )
 
         # 处理响应
         full_response = []
