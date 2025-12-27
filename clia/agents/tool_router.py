@@ -1,5 +1,5 @@
 import json
-import tools
+from clia.agents import tools
 from dataclasses import dataclass
 from typing import Callable, Dict
 
@@ -56,5 +56,5 @@ def run_tool(tool_name: str, **kwargs):
 def tools_specs():
     lines = []
     for tool in TOOLS.values():
-        lines.append(f' - {tool.name}: {tool.desc} | args: {json.dumps(tool.schema, ascii=False)}')
+        lines.append(f' - {tool.name}: {tool.desc} | args: {json.dumps(tool.schema, ensure_ascii=False)}')
     return '\n'.join(lines)

@@ -1,11 +1,9 @@
 from token import tok_name
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, List
 import json
 import re
-from tool_router import run_tool, tools_specs
-from openai.types.responses import response
-import llm
-import prompts
+from .tool_router import run_tool, tools_specs
+from clia.agents import llm, prompts
 
 PLAN_RE = re.compile(r"\[.*\]", re.DOTALL)
 
@@ -33,14 +31,14 @@ def _planner(question: str,
              frequency_penalty: float,
              max_tokens: int,
              timeout: float) -> List[Dict]:
-        
+
     # 创建LLM客户端
     client = llm.openai_client(
         api_key=api_key,
         base_url=base_url,
         max_retries=max_retries
     )
-
+ 
     # 获取任务特定的prompt
     PLAN_PROMPT = """
 你是一个规划-执行助手，请先给出步骤计划。输出 JSON 数组，每个元素形如：
@@ -52,12 +50,9 @@ def _planner(question: str,
 - 如果需要工具，先列出工具步骤，最后一个步骤给 final。"""
 
     messages = [
-        {"role": "system", "content": PLAN_PROMPT + "\n\n可用工具:\n" + tools_specs()},
+        {"role": "system", "content": PLAN_PROMPT + "\n\n可用工具:\n" + {tools_specs()}},
         {"role": "user", "content": question}
     ]
-
-    # logger.info(
-    #     f"Messages prepared for {args.command} command: {messages}")
 
     # 调用LLM API
     response = client.chat.completions.create(
@@ -70,9 +65,10 @@ def _planner(question: str,
         max_tokens=max_tokens,
         timeout=timeout
     )
-    
+    print('\n\n' + response + '\n')
     # TO-DO：支持流式输出
     response = _extract_plan(response.choices[0].message.content)
+    
     return response
 
 def _executor(question: str,
@@ -155,7 +151,6 @@ def plan_execute(question: str,
                  frequency_penalty: float,
                  max_tokens: int,
                  timeout: float) -> str:
-    
     plan = _planner(question=question,
                     api_key=api_key,
                     base_url=base_url,

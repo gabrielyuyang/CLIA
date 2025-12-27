@@ -2,7 +2,6 @@ import argparse
 import sys
 from pathlib import Path
 from .config import Settings
-from .agents import llm, prompts
 from .agents.plan_execute_agent import plan_execute
 from .agents.history import History
 from .utils import get_multiline_input
@@ -213,7 +212,7 @@ def main():
                                 top_p=top_p,
                                 frequency_penalty=settings.frequency_penalty,
                                 max_tokens=settings.max_tokens,
-                                timeout=settings.timeout,
+                                timeout=settings.timeout_seconds,
                                 )
 
         # 处理响应
