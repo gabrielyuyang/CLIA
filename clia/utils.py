@@ -25,7 +25,7 @@ def to_bool(value: Any, default: bool = False) -> bool:
 
 
 def get_multiline_input() -> str:
-    """获取多行输入，直到遇到EOF"""
+    """获取多行输入, 直到遇到EOF"""
     # print("Enter your question with EOF as the endding:")
     lines = []
     while True:

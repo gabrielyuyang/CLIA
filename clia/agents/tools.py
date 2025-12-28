@@ -11,13 +11,15 @@ def read_file_safe(path_str: str, max_chars: int = 4000) -> str:
         content = f.read()
         if len(content) > max_chars:
             return f"[File {path_str} is too large]"
-        return content    
-    
+        return content
+
+
 def echo_safe(text: str, max_chars: int = 4000) -> str:
     "Echo text safely with size limit"
     if len(text) > max_chars:
         return f"[Text is too large]"
     return text
+
 
 def http_get(url: str, timeout: float = 10.0) -> str:
     "Simple HTTP GET request with timeout and basic error handling"

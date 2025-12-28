@@ -1,6 +1,4 @@
 import os
-import sys
-from pathlib import Path
 from dataclasses import dataclass
 from dotenv import load_dotenv
 from .utils import to_bool
@@ -11,7 +9,7 @@ load_dotenv()
 @dataclass
 class Settings:
     """Configuration settings for CLIA."""
-    
+
     api_key: str
     base_url: str
     model: str
@@ -29,7 +27,7 @@ class Settings:
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError('OPENAI_API_KEY not set in environment variables')
-        
+
         return cls(
             api_key=api_key,
             base_url=os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1'),

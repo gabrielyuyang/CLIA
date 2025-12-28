@@ -10,7 +10,7 @@ class Tool:
     desc: str
     schema: Dict[str, str]
     handler: Callable[..., str]
-    
+
 
 TOOLS = {
     "read_file": Tool(
@@ -52,6 +52,7 @@ def run_tool(tool_name: str, **kwargs):
     if not any(k in TOOLS[tool_name].schema for k in kwargs):
         raise ValueError(f"Unknown arguments for tool {tool_name}: {TOOLS[tool_name].schema}")
     return TOOLS[tool_name].handler(**kwargs)
+
 
 def tools_specs():
     lines = []
