@@ -1,9 +1,12 @@
 from typing import Dict, Optional, List
 import json
 import re
-from .tool_router import run_tool, tools_specs
+import logging
+from .tool_router import run_tool, tools_specs, TOOLS
 from clia.agents import llm, prompts
 
+
+logger = logging.getLogger(__name__)
 PLAN_RE = re.compile(r"\[.*\]", re.DOTALL)
 
 
@@ -65,7 +68,6 @@ def _planner(question: str,
         timeout=timeout
     )
 
-    # TO-DO：支持流式输出
     response = _extract_plan(response)
     return response
 
@@ -89,13 +91,15 @@ def _executor(question: str,
     final_answer: Optional[str] = None
 
     for idx, step in enumerate(plan[: max_steps]):
-        if step["action"] == "tool":
+        if step["action"] == "tool" or step["action"] in TOOLS:
             tool_name = step.get("tool")
             tool_args = step.get("args", {})
             try:
-                print(f"Running tool: {tool_name} with args: {tool_args}")
+                logger.debug(f"Running tool: {tool_name} with args: {tool_args}")
                 result = run_tool(tool_name, **tool_args)
+                logger.debug(f"Tool execution result: {result}")
             except Exception as e:
+                logger.error(f"Tool execution failed: {tool_name}: {e}")
                 result = f"[工具执行失败] {tool_name}: {e}"
             results_steps.append(
                 {"step": idx,
@@ -103,10 +107,12 @@ def _executor(question: str,
                  "args": tool_args,
                  "result": result})
         elif step["action"] == "final":
+            logger.debug(f"Final answer in step: {step['answer']}")
             results_steps.append(step["answer"])
             break
 
     if final_answer:
+        logger.info(f"Final answer: {final_answer}")
         return final_answer
 
     # 获取任务特定的prompt

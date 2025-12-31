@@ -37,18 +37,22 @@ def parse_args() -> argparse.ArgumentParser:
     PARSER_DICT = {
         # ask命令
         "ask_parser": sub_parsers.add_parser(
-            "ask", help="A Routine Q&A Assistant for General Tasks"
-        ),
+            "ask", help="A Routine Q&A Assistant for General Tasks"),
         # draft命令
-        "draft_parser": sub_parsers.add_parser("draft", help="Parse user spec"),
+        "draft_parser": sub_parsers.add_parser(
+            "draft", help="Parse user spec"),
         # explain命令
-        "explain_parser": sub_parsers.add_parser("explain", help="Explain codes"),
+        "explain_parser": sub_parsers.add_parser(
+            "explain", help="Explain codes"),
         # debug命令
-        "debug_parser": sub_parsers.add_parser("debug", help="Debug codes"),
+        "debug_parser": sub_parsers.add_parser(
+            "debug", help="Debug codes"),
         # fix命令
-        "fix_parser": sub_parsers.add_parser("fix", help="Fix codes"),
+        "fix_parser": sub_parsers.add_parser(
+            "fix", help="Fix codes"),
         # generate命令
-        "generate_parser": sub_parsers.add_parser("generate", help="Generate codes"),
+        "generate_parser": sub_parsers.add_parser(
+            "generate", help="Generate codes"),
     }
 
     # 添加通用参数
@@ -148,6 +152,7 @@ def main():
         print("-" * 28 + "\n")
 
         logger.info(f"User Query: {question}")
+        logger.info(f"Command line arguments: {args}")
 
         # 加载配置
         settings = Settings.load_openai()
