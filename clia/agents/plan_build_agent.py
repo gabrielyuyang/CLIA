@@ -72,7 +72,7 @@ def _planner(question: str,
     return response
 
 
-def _executor(question: str,
+def _builder(question: str,
               plan: List[Dict],
               command: str,
               max_steps: int,
@@ -146,7 +146,7 @@ def _executor(question: str,
     return final_answer
 
 
-def plan_execute(question: str,
+def plan_build(question: str,
                  command: str,
                  max_steps: int,
                  api_key: str,
@@ -170,7 +170,7 @@ def plan_execute(question: str,
                     frequency_penalty=frequency_penalty,
                     max_tokens=max_tokens,
                     timeout=timeout)
-    return _executor(question=question,
+    return _builder(question=question,
                      plan=plan,
                      command=command,
                      max_steps=max_steps,

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from .agents.history import History
-from .agents.plan_execute_agent import plan_execute
+from .agents.plan_build_agent import plan_build
 from .config import Settings
 from .utils import get_multiline_input
 
@@ -166,7 +166,7 @@ def main():
         max_retries = args.max_retries or settings.max_retries
 
         # TO-DO: 添加支持with_calibration参数
-        full_response = plan_execute(
+        full_response = plan_build(
             question=question,
             command=args.command,
             max_steps=5,
