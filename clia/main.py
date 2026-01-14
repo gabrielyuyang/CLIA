@@ -7,6 +7,11 @@ from .agents.history import History
 from .agents.plan_build_agent import plan_build
 from .agents.react_agent import react_agent
 from .agents.llm_compiler_agent import llm_compiler_agent
+from .agents.reflection import (
+    reflect_react_agent,
+    reflect_llm_compiler_agent,
+    reflect_plan_build_agent
+)
 from .config import Settings
 from .utils import get_multiline_input
 
@@ -130,6 +135,11 @@ def parse_args() -> argparse.ArgumentParser:
             "--with-interaction", action="store_true", help="Enable interaction mode"
         )
 
+        # Reflection模式
+        command_parser.add_argument(
+            "--with-reflection", action="store_true", help="Enable reflection mode - agent will self-critique its performance"
+        )
+
         # Agent模式选择
         command_parser.add_argument(
             "--agent",
@@ -183,9 +193,10 @@ def main():
         max_retries = args.max_retries or settings.max_retries
 
         # 选择agent架构
+        execution_metadata = None
         if args.agent == "react":
             logger.info("Using ReAct agent architecture")
-            full_response = react_agent(
+            result = react_agent(
                 question=question,
                 command=args.command,
                 max_iterations=args.max_iterations,
@@ -199,11 +210,16 @@ def main():
                 frequency_penalty=settings.frequency_penalty,
                 max_tokens=settings.max_tokens,
                 timeout=settings.timeout_seconds,
-                verbose=args.verbose
+                verbose=args.verbose,
+                return_metadata=args.with_reflection
             )
+            if args.with_reflection:
+                full_response, execution_metadata = result
+            else:
+                full_response = result
         elif args.agent == "llm-compiler":
             logger.info("Using LLMCompiler agent architecture")
-            full_response = llm_compiler_agent(
+            result = llm_compiler_agent(
                 question=question,
                 command=args.command,
                 api_key=settings.api_key,
@@ -216,15 +232,21 @@ def main():
                 frequency_penalty=settings.frequency_penalty,
                 max_tokens=settings.max_tokens,
                 timeout=settings.timeout_seconds,
-                verbose=args.verbose
+                verbose=args.verbose,
+                return_metadata=args.with_reflection
             )
-            # LLMCompiler returns a string, wrap it in a list for consistency
-            if isinstance(full_response, str):
+            if args.with_reflection:
+                full_response, execution_metadata = result
                 full_response = [full_response]
+            else:
+                full_response = result
+                # LLMCompiler returns a string, wrap it in a list for consistency
+                if isinstance(full_response, str):
+                    full_response = [full_response]
         else:
             logger.info("Using Plan-Build agent architecture")
             # TO-DO: 添加支持with_calibration参数
-            full_response = plan_build(
+            result = plan_build(
                 question=question,
                 command=args.command,
                 max_steps=5,
@@ -237,11 +259,99 @@ def main():
                 top_p=top_p,
                 frequency_penalty=settings.frequency_penalty,
                 max_tokens=settings.max_tokens,
-                timeout=settings.timeout_seconds
+                timeout=settings.timeout_seconds,
+                return_metadata=args.with_reflection
             )
+            if args.with_reflection:
+                full_response, execution_metadata = result
+                full_response = [full_response]
+            else:
+                full_response = result
+                if isinstance(full_response, str):
+                    full_response = [full_response]
 
-        # if isinstance(full_response, str):
-        #     return
+        # Generate reflection if requested
+        if args.with_reflection and execution_metadata:
+            logger.info("\n" + "=" * 60)
+            logger.info("Generating Reflection...")
+            logger.info("=" * 60)
+
+            # Handle both string and list responses for final answer
+            if isinstance(full_response, list):
+                final_answer_str = "".join(full_response)
+            else:
+                final_answer_str = str(full_response)
+
+            try:
+                if args.agent == "react":
+                    reflection = reflect_react_agent(
+                        question=question,
+                        conversation_history=execution_metadata.get("conversation_history", []),
+                        final_answer=final_answer_str,
+                        iterations_used=execution_metadata.get("iterations_used", 0),
+                        max_iterations=execution_metadata.get("max_iterations", args.max_iterations),
+                        api_key=settings.api_key,
+                        base_url=settings.base_url,
+                        max_retries=max_retries,
+                        model=model,
+                        temperature=temperature,
+                        top_p=top_p,
+                        frequency_penalty=settings.frequency_penalty,
+                        max_tokens=settings.max_tokens,
+                        timeout=settings.timeout_seconds,
+                        verbose=args.verbose
+                    )
+                elif args.agent == "llm-compiler":
+                    reflection = reflect_llm_compiler_agent(
+                        question=question,
+                        plan=execution_metadata.get("plan", []),
+                        execution_results=execution_metadata.get("execution_results", {}),
+                        final_answer=final_answer_str,
+                        plan_valid=True,  # Assume valid if we got here
+                        api_key=settings.api_key,
+                        base_url=settings.base_url,
+                        max_retries=max_retries,
+                        model=model,
+                        temperature=temperature,
+                        top_p=top_p,
+                        frequency_penalty=settings.frequency_penalty,
+                        max_tokens=settings.max_tokens,
+                        timeout=settings.timeout_seconds,
+                        verbose=args.verbose
+                    )
+                else:  # plan-build
+                    reflection = reflect_plan_build_agent(
+                        question=question,
+                        plan=execution_metadata.get("plan", []),
+                        execution_results=execution_metadata.get("execution_results", []),
+                        final_answer=final_answer_str,
+                        steps_executed=execution_metadata.get("steps_executed", 0),
+                        max_steps=execution_metadata.get("max_steps", 5),
+                        api_key=settings.api_key,
+                        base_url=settings.base_url,
+                        max_retries=max_retries,
+                        model=model,
+                        temperature=temperature,
+                        top_p=top_p,
+                        frequency_penalty=settings.frequency_penalty,
+                        max_tokens=settings.max_tokens,
+                        timeout=settings.timeout_seconds,
+                        verbose=args.verbose
+                    )
+
+                # Print reflection
+                if not args.quiet:
+                    print("\n" + "=" * 60)
+                    print("REFLECTION")
+                    print("=" * 60)
+                    print(str(reflection))
+                    print("=" * 60 + "\n")
+
+                logger.info("Reflection generated successfully")
+            except Exception as e:
+                logger.error(f"Failed to generate reflection: {e}")
+                if args.verbose:
+                    print(f"\nWarning: Reflection generation failed: {e}\n")
 
         # 保存历史记录
         if not args.no_history and args.history:

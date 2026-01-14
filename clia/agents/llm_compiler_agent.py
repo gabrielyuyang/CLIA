@@ -326,7 +326,8 @@ def llm_compiler_agent(
     frequency_penalty: float = 0.0,
     max_tokens: int = 4096,
     timeout: float = 30.0,
-    verbose: bool = False
+    verbose: bool = False,
+    return_metadata: bool = False
 ) -> str:
     """
     Run an LLMCompiler agent to solve a task.
@@ -348,6 +349,7 @@ def llm_compiler_agent(
 
     Returns:
         Final answer string
+        If return_metadata is True, returns tuple of (final_answer, metadata_dict)
     """
     system_prompt = _build_compiler_prompt(command)
 
@@ -466,6 +468,14 @@ Provide a clear, concise final answer:"""
         except Exception as e:
             logger.error(f"Failed to synthesize final answer: {e}")
             final_answer = f"Tool execution completed but failed to generate final answer: {e}\n\nResults:\n{results_summary}"
+
+    if return_metadata:
+        metadata = {
+            "plan": plan,
+            "execution_results": results,
+            "plan_valid": plan_valid
+        }
+        return final_answer, metadata
 
     return final_answer
 

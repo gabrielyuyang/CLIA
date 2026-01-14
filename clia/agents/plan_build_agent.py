@@ -85,7 +85,8 @@ def _builder(question: str,
               top_p: float,
               frequency_penalty: float,
               max_tokens: int,
-              timeout: float) -> str:
+              timeout: float,
+              return_metadata: bool = False) -> str:
 
     results_steps: List[Dict] = []
     final_answer: Optional[str] = None
@@ -143,6 +144,16 @@ def _builder(question: str,
     # TO-DO：支持with_calibration参数
     # TO-DO：支持流式输出
 
+    if return_metadata:
+        steps_executed = len([s for s in results_steps if isinstance(s, dict)])
+        metadata = {
+            "plan": plan,
+            "execution_results": results_steps,
+            "steps_executed": steps_executed,
+            "max_steps": max_steps
+        }
+        return final_answer, metadata
+
     return final_answer
 
 
@@ -158,7 +169,8 @@ def plan_build(question: str,
                  top_p: float,
                  frequency_penalty: float,
                  max_tokens: int,
-                 timeout: float) -> str:
+                 timeout: float,
+                 return_metadata: bool = False) -> str:
     plan = _planner(question=question,
                     api_key=api_key,
                     base_url=base_url,
@@ -183,4 +195,5 @@ def plan_build(question: str,
                      top_p=top_p,
                      frequency_penalty=frequency_penalty,
                      max_tokens=max_tokens,
-                     timeout=timeout)
+                     timeout=timeout,
+                     return_metadata=return_metadata)

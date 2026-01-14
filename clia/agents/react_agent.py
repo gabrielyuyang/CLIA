@@ -104,7 +104,8 @@ def react_agent(
     frequency_penalty: float = 0.0,
     max_tokens: int = 4096,
     timeout: float = 30.0,
-    verbose: bool = False
+    verbose: bool = False,
+    return_metadata: bool = False
 ) -> List[str]:
     """
     Run a ReAct agent to solve a task.
@@ -127,6 +128,7 @@ def react_agent(
 
     Returns:
         List of response strings (for streaming compatibility)
+        If return_metadata is True, returns tuple of (response_list, metadata_dict)
     """
     system_prompt = _build_react_prompt(command)
 
@@ -264,7 +266,19 @@ def react_agent(
                 if not stream:
                     print("I've reached the maximum number of iterations. Please refine your question or try again.")
 
-    return full_response if full_response else ["No response generated"]
+    response = full_response if full_response else ["No response generated"]
+
+    if return_metadata:
+        final_answer_str = "".join(response) if isinstance(response, list) else str(response)
+        metadata = {
+            "conversation_history": conversation_history,
+            "iterations_used": iteration + 1,
+            "max_iterations": max_iterations,
+            "final_answer": final_answer_str
+        }
+        return response, metadata
+
+    return response
 
 
 def react_agent_simple(
