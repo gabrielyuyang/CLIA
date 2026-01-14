@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .agents.history import History
 from .agents.plan_build_agent import plan_build
+from .agents.react_agent import react_agent
 from .config import Settings
 from .utils import get_multiline_input
 
@@ -127,6 +128,21 @@ def parse_args() -> argparse.ArgumentParser:
         command_parser.add_argument(
             "--with-interaction", action="store_true", help="Enable interaction mode"
         )
+
+        # Agent模式选择
+        command_parser.add_argument(
+            "--agent",
+            choices=["plan-build", "react"],
+            default="plan-build",
+            help="Agent architecture to use: 'plan-build' (default) or 'react' (ReAct pattern)"
+        )
+
+        command_parser.add_argument(
+            "--max-iterations",
+            type=int,
+            default=10,
+            help="Maximum iterations for ReAct agent (default: 10)"
+        )
     return parser.parse_args()
 
 
@@ -165,32 +181,58 @@ def main():
         top_p = args.top_p or settings.top_p
         max_retries = args.max_retries or settings.max_retries
 
-        # TO-DO: 添加支持with_calibration参数
-        full_response = plan_build(
-            question=question,
-            command=args.command,
-            max_steps=5,
-            api_key=settings.api_key,
-            base_url=settings.base_url,
-            max_retries=max_retries,
-            model=model,
-            stream=stream,
-            temperature=temperature,
-            top_p=top_p,
-            frequency_penalty=settings.frequency_penalty,
-            max_tokens=settings.max_tokens,
-            timeout=settings.timeout_seconds
-        )
+        # 选择agent架构
+        if args.agent == "react":
+            logger.info("Using ReAct agent architecture")
+            full_response = react_agent(
+                question=question,
+                command=args.command,
+                max_iterations=args.max_iterations,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds,
+                verbose=args.verbose
+            )
+        else:
+            logger.info("Using Plan-Build agent architecture")
+            # TO-DO: 添加支持with_calibration参数
+            full_response = plan_build(
+                question=question,
+                command=args.command,
+                max_steps=5,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds
+            )
 
         # if isinstance(full_response, str):
         #     return
 
         # 保存历史记录
         if not args.no_history and args.history:
+            # Handle both string and list responses
+            if isinstance(full_response, list):
+                response_content = "".join(full_response)
+            else:
+                response_content = str(full_response)
             history = History(
                 [
-                    {"role": "user", "content": args.question},
-                    {"role": "assistant", "content": "".join(full_response)},
+                    {"role": "user", "content": question},
+                    {"role": "assistant", "content": response_content},
                 ]
             )
             history.save_jsonl(Path(args.history))

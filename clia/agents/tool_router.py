@@ -28,7 +28,7 @@ TOOLS = {
         schema={
             "text": "the text to echo"
         },
-        handler=lambda text: tools.echo(text)
+        handler=lambda text: tools.echo_safe(text)
     ),
     "http_get": Tool(
         name="http_get",
