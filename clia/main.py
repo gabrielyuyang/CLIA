@@ -6,6 +6,7 @@ from pathlib import Path
 from .agents.history import History
 from .agents.plan_build_agent import plan_build
 from .agents.react_agent import react_agent
+from .agents.llm_compiler_agent import llm_compiler_agent
 from .config import Settings
 from .utils import get_multiline_input
 
@@ -132,9 +133,9 @@ def parse_args() -> argparse.ArgumentParser:
         # Agent模式选择
         command_parser.add_argument(
             "--agent",
-            choices=["plan-build", "react"],
+            choices=["plan-build", "react", "llm-compiler"],
             default="plan-build",
-            help="Agent architecture to use: 'plan-build' (default) or 'react' (ReAct pattern)"
+            help="Agent architecture to use: 'plan-build' (default), 'react' (ReAct pattern), or 'llm-compiler' (parallel execution)"
         )
 
         command_parser.add_argument(
@@ -200,6 +201,26 @@ def main():
                 timeout=settings.timeout_seconds,
                 verbose=args.verbose
             )
+        elif args.agent == "llm-compiler":
+            logger.info("Using LLMCompiler agent architecture")
+            full_response = llm_compiler_agent(
+                question=question,
+                command=args.command,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds,
+                verbose=args.verbose
+            )
+            # LLMCompiler returns a string, wrap it in a list for consistency
+            if isinstance(full_response, str):
+                full_response = [full_response]
         else:
             logger.info("Using Plan-Build agent architecture")
             # TO-DO: 添加支持with_calibration参数

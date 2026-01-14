@@ -10,6 +10,7 @@ from .prompts import get_prompt
 from .history import History
 from .react_agent import react_agent, react_agent_simple
 from .plan_build_agent import plan_build
+from .llm_compiler_agent import llm_compiler_agent, llm_compiler_agent_simple
 
 __all__ = [
     "openai_completion",
@@ -17,5 +18,7 @@ __all__ = [
     "History",
     "react_agent",
     "react_agent_simple",
-    "plan_build"
+    "plan_build",
+    "llm_compiler_agent",
+    "llm_compiler_agent_simple"
 ]
