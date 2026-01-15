@@ -1,24 +1,42 @@
 # CLIA: An Efficient Minimalist CLI AI Agent
 
-CLIA, an implentation of COTA (Calibration of Thoughts and Actions), is a minimalist CLI AI agent that uses a plan-build architecture to interact with users and perform various coding tasks. It leverages OpenAI-compatible APIs to provide intelligent assistance with a focus on simplicity and efficiency.
+CLIA is a powerful command-line AI agent that implements multiple agent architectures (Plan-Build, ReAct, and LLMCompiler) to help developers with various coding tasks. It leverages OpenAI-compatible APIs to provide intelligent assistance with a focus on simplicity, efficiency, and flexibility.
 
 ## Features
 
-- **Plan-Build Architecture**: Automatically plans execution steps and builds responses using available tools
-- **Multiple Task Types**: Specialized commands for different coding scenarios (ask, draft, explain, debug, fix, generate)
-- **Flexible API Configuration**: Works with OpenAI-compatible APIs (supports custom base URLs like ModelScope)
+### Multiple Agent Architectures
+
+- **Plan-Build Agent** (Default): Plans all steps upfront, then executes them sequentially. Best for predictable, well-defined tasks.
+- **ReAct Agent**: Iterative reasoning-action-observation pattern. Adapts dynamically to results. Best for complex, exploratory tasks.
+- **LLMCompiler Agent**: Compiles tasks into a Directed Acyclic Graph (DAG) and executes independent steps in parallel. Best for tasks with parallelizable operations.
+
+#### Notes: ReAct and LLMCompiler agents are experimental and may be deprecated in future versions.
+
+### Task Types
+
+- **ask**: General Q&A assistant for routine questions
+- **draft**: Spec-driven development - analyze specifications and generate implementations
+- **explain**: Code explanation with clear breakdowns
+- **debug**: Identify and locate bugs in code
+- **fix**: Fix bugs and generate test cases
+- **generate**: Generate ready-to-run code examples
+
+### Advanced Features
+
+- **Reflection Mode**: Self-critique agent performance and identify improvements
 - **Tool Integration**: Built-in tools for file reading, HTTP requests, and text operations
 - **Conversation History**: Optional history saving in JSONL format
 - **Streaming Support**: Real-time streaming output for faster responses
 - **Multiline Input**: Support for complex multi-line queries
 - **Customizable Parameters**: Override model settings via command-line arguments
 - **Multiple Output Formats**: Markdown, JSON, or plain text output
+- **Flexible API Configuration**: Works with any OpenAI-compatible API
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.7 or higher
+- Python 3.8 or higher
 - pip package manager
 
 ### Install from Source
@@ -26,7 +44,7 @@ CLIA, an implentation of COTA (Calibration of Thoughts and Actions), is a minima
 Clone the repository and install CLIA:
 
 ```bash
-git clone <repository-url>
+git clone https://gitcode.com/gabrielyuyang/clia
 cd clia
 pip install .
 ```
@@ -38,18 +56,20 @@ CLIA requires the following dependencies (automatically installed with pip insta
 - `python-dotenv` - For environment variable management
 - `httpx` - For HTTP client functionality
 - `openai` - For OpenAI API compatibility
+- `pydantic` - For data validation
+- `tqdm` - For progress bars
 
 ## Configuration
 
 ### Environment Variables
 
-Create a `.env` file in the project root (or copy `.env.example`):
+Create a `.env` file in the project root:
 
 ```bash
 # OpenAI API Configuration
 OPENAI_API_KEY=your-api-key-here
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=glm-4.6
 OPENAI_STREAM=False
 OPENAI_TEMPERATURE=0.0
 OPENAI_MAX_TOKENS=4096
@@ -58,6 +78,8 @@ OPENAI_TIMEOUT_SECONDS=30
 OPENAI_TOP_P=0.85
 OPENAI_FREQUENCY_PENALTY=0.0
 ```
+
+**Note**: The default model is `glm-4.6`. You can override it with any OpenAI-compatible model.
 
 ### Using Custom API Providers
 
@@ -160,20 +182,38 @@ clia generate "Write a web scraper for news articles"
 - `--history <path>` - Save conversation history to a JSONL file
 - `--no-history` - Disable history saving
 
+#### Agent Selection
+
+- `--agent {plan-build,react,llm-compiler}` - Choose agent architecture (default: plan-build)
+- `--max-iterations <int>` - Maximum iterations for ReAct agent (default: 10)
+
 #### Advanced Features
 
 - `--with-calibration` - Enable calibration mode for testing and validation
 - `--with-interaction` - Enable interactive mode
+- `--with-reflection` - Enable reflection mode - agent will self-critique its performance
 
 ### Usage Examples
 
-#### Example 1: Simple Question
+#### Example 1: Simple Question with Default Agent
 
 ```bash
 clia ask "What is the difference between list and tuple in Python?"
 ```
 
-#### Example 2: Multiline Input
+#### Example 2: Using ReAct Agent
+
+```bash
+clia ask "Read file.txt and summarize its contents" --agent react --verbose
+```
+
+#### Example 3: Using LLMCompiler Agent for Parallel Execution
+
+```bash
+clia ask "Read file1.txt and file2.txt, then compare them" --agent llm-compiler
+```
+
+#### Example 4: Multiline Input
 
 ```bash
 clia draft --multiline
@@ -186,31 +226,37 @@ Create a class for managing a bank account with:
 EOF
 ```
 
-#### Example 3: File-Based Code Explanation
+#### Example 5: File-Based Code Explanation
 
 ```bash
 clia explain "Explain the main algorithm" --file algorithms.py
 ```
 
-#### Example 4: Debugging with Custom Model
+#### Example 6: Debugging with Custom Model
 
 ```bash
 clia debug "Fix the segmentation fault" --file crash.c --model gpt-4 --verbose
 ```
 
-#### Example 5: Generate with Streaming
+#### Example 7: Generate with Streaming
 
 ```bash
 clia generate "Create a REST API endpoint for user authentication" --stream
 ```
 
-#### Example 6: Save History
+#### Example 8: Save History
 
 ```bash
 clia ask "Explain machine learning concepts" --history conversations.jsonl
 ```
 
-#### Example 7: Spec-Driven Development
+#### Example 9: Reflection Mode
+
+```bash
+clia ask "Complex task requiring multiple steps" --agent react --with-reflection
+```
+
+#### Example 10: Spec-Driven Development
 
 ```bash
 clia draft --file requirements.txt --with-calibration
@@ -218,28 +264,144 @@ clia draft --file requirements.txt --with-calibration
 
 ## Architecture
 
-CLIA uses a **Plan-Build** pattern:
+### Agent Architectures
 
-1. **Planner Phase**: The AI analyzes the request and creates a step-by-step plan using available tools
-2. **Builder Phase**: Executes the plan, runs tools, and synthesizes the final response
+#### Plan-Build Agent (Default)
+
+The Plan-Build agent follows a two-phase approach:
+
+1. **Planning Phase**: Analyzes the request and creates a step-by-step plan using available tools
+2. **Building Phase**: Executes the plan sequentially and synthesizes the final response
+
+**Best for**: Simple, predictable tasks with clear requirements
+
+#### ReAct Agent
+
+The ReAct (Reasoning + Acting) agent follows an iterative pattern:
+
+1. **Reason**: Think about what to do next
+2. **Act**: Execute a tool
+3. **Observe**: Process the result
+4. **Repeat**: Continue until the task is complete
+
+**Best for**: Complex, exploratory tasks that require adaptive reasoning
+
+**Format**:
+```
+Thought: [reasoning]
+Action: [tool_name]
+Action Input: [JSON arguments]
+Observation: [tool result]
+...
+Final Answer: [final response]
+```
+
+#### LLMCompiler Agent
+
+The LLMCompiler agent compiles tasks into a DAG:
+
+1. **Planning Phase**: Generates a Directed Acyclic Graph of tool calls with dependencies
+2. **Execution Phase**: Executes independent steps in parallel, respecting dependencies
+3. **Synthesis Phase**: Combines results into final answer
+
+**Best for**: Tasks with parallelizable operations (e.g., reading multiple files)
+
+**Format**:
+```json
+[
+    {
+        "id": "step1",
+        "tool": "read_file",
+        "args": {"path_str": "file1.txt"},
+        "dependencies": []
+    },
+    {
+        "id": "step2",
+        "tool": "read_file",
+        "args": {"path_str": "file2.txt"},
+        "dependencies": []
+    },
+    {
+        "id": "final",
+        "action": "final",
+        "answer": "...",
+        "dependencies": ["step1", "step2"]
+    }
+]
+```
 
 ### Available Tools
 
-- `read_file_safe` - Read local files with size limits
-- `echo_safe` - Echo text with size validation
-- `http_get` - Perform HTTP GET requests with timeout handling
+CLIA provides the following built-in tools:
+
+- **`read_file`**: Read local files with size limits
+  - Args: `path_str` (file path), `max_chars` (max characters, default: 4000)
+  
+- **`echo`**: Echo text with size validation
+  - Args: `text` (text to echo), `max_chars` (max characters, default: 4000)
+  
+- **`http_get`**: Perform HTTP GET requests with timeout handling
+  - Args: `url` (target URL), `timeout` (timeout in seconds, default: 10.0)
+
+### Reflection System
+
+When `--with-reflection` is enabled, CLIA generates a self-critique after task completion:
+
+- **Strengths**: What the agent did well
+- **Errors/Issues**: What went wrong or could be improved
+- **Improvements**: Concrete suggestions for better performance
+
+Reflection is agent-specific and analyzes:
+- **ReAct**: Iterations used, tools used, conversation flow
+- **LLMCompiler**: Plan validity, parallel execution opportunities, dependency depth
+- **Plan-Build**: Plan length, steps executed, tool usage
 
 ### Workflow Diagram
 
-```mermaid
-graph TD
-    A[User Input] --> B[Planner]
-    B --> C{Needs Tools?}
-    C -->|Yes| D[Execute Tools]
-    C -->|No| E[Direct Answer]
-    D --> F[Builder]
-    E --> F
-    F --> G[Final Response]
+```
+┌─────────────┐
+│  User Input │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────┐
+│  Agent Selection│
+│  (plan-build/   │
+│   react/llm-    │
+│   compiler)     │
+└──────┬──────────┘
+       │
+       ├─────────────────┬──────────────────┐
+       ▼                 ▼                  ▼
+┌─────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Plan-Build  │  │    ReAct    │  │ LLMCompiler  │
+│   Agent     │  │    Agent    │  │    Agent     │
+└──────┬──────┘  └──────┬───────┘  └──────┬───────┘
+       │                │                  │
+       ▼                ▼                  ▼
+┌─────────────┐  ┌──────────────┐  ┌──────────────┐
+│   Plan      │  │   Thought    │  │  DAG Plan    │
+│   Steps     │  │   Action     │  │  Generation  │
+└──────┬──────┘  └──────┬───────┘  └──────┬───────┘
+       │                │                  │
+       ▼                ▼                  ▼
+┌─────────────┐  ┌──────────────┐  ┌──────────────┐
+│  Execute    │  │  Execute     │  │  Parallel    │
+│  Sequentially│  │  Iteratively │  │  Execution   │
+└──────┬──────┘  └──────┬───────┘  └──────┬───────┘
+       │                │                  │
+       └────────────────┴──────────────────┘
+                        │
+                        ▼
+              ┌─────────────────┐
+              │  Final Answer   │
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │   Reflection    │
+              │   (optional)    │
+              └─────────────────┘
 ```
 
 ## Advanced Configuration
@@ -270,6 +432,79 @@ Enable calibration to test and validate code during generation:
 clia generate "Create a sorting algorithm" --with-calibration
 ```
 
+### Reflection Mode
+
+Enable reflection to get self-critique after task completion:
+
+```bash
+clia ask "Complex task" --agent react --with-reflection --verbose
+```
+
+## Project Structure
+
+```
+clia/
+├── agents/
+│   ├── __init__.py
+│   ├── history.py              # Conversation history management
+│   ├── llm.py                  # LLM API interface
+│   ├── llm_compiler_agent.py   # LLMCompiler agent implementation
+│   ├── plan_build_agent.py     # Plan-build orchestration
+│   ├── prompts.py              # Task-specific prompts
+│   ├── react_agent.py          # ReAct agent implementation
+│   ├── reflection.py           # Reflection and self-critique
+│   ├── tool_router.py          # Tool routing and execution
+│   └── tools.py                # Available tools (read_file, echo, http_get)
+├── histories/                  # Conversation history storage (JSONL files)
+├── tests/                      # Test files
+├── config.py                   # Configuration management
+├── main.py                     # CLI entry point
+├── utils.py                    # Utility functions
+└── __init__.py
+examples/                       # Example scripts
+├── react_example.py            # ReAct agent usage example
+```
+
+## Documentation
+
+Detailed documentation for each agent architecture is available:
+
+- **[Plan-Build Agent](PLAN_BUILD_AGENT.md)**: Two-phase planning and execution approach
+- **[ReAct Agent](REACT_AGENT.md)**: Iterative reasoning-action-observation pattern
+- **[LLMCompiler Agent](LLM_COMPILER_AGENT.md)**: DAG-based parallel execution
+- **[Reflection System](REFLECTION_AGENT.md)**: Self-critique and performance analysis
+
+## Development
+
+### Running Tests
+
+```bash
+python -m pytest tests/
+```
+
+### Programmatic Usage
+
+You can also use CLIA agents programmatically:
+
+```python
+from clia.agents.react_agent import react_agent
+from clia.config import Settings
+
+settings = Settings.load_openai()
+
+response = react_agent(
+    question="What is in file.txt?",
+    command="ask",
+    max_iterations=10,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    model=settings.model,
+    verbose=True
+)
+```
+
+See `examples/react_example.py` for a complete example.
+
 ## Troubleshooting
 
 ### API Connection Issues
@@ -289,32 +524,24 @@ OPENAI_TIMEOUT_SECONDS=60
 
 ### Large File Reading
 
-The `read_file_safe` tool has a default 4000 character limit. Adjust in your code if needed.
+The `read_file` tool has a default 4000 character limit. Adjust in your code if needed.
 
-## Development
+### Agent Selection
 
-### Project Structure
+- Use **plan-build** for simple, predictable tasks
+- Use **react** for complex tasks requiring adaptive reasoning
+- Use **llm-compiler** for tasks with parallelizable operations
 
-```
-clia/
-├── agents/
-│   ├── history.py          # Conversation history management
-│   ├── llm.py              # LLM API interface
-│   ├── plan_build_agent.py # Plan-build orchestration
-│   ├── prompts.py          # Task-specific prompts
-│   ├── tool_router.py      # Tool routing and execution
-│   └── tools.py            # Available tools
-├── config.py               # Configuration management
-├── main.py                 # CLI entry point
-├── utils.py                # Utility functions
-└── __init__.py
-```
+## Comparison of Agent Architectures
 
-### Running Tests
-
-```bash
-python -m pytest tests/
-```
+| Feature | Plan-Build | ReAct | LLMCompiler |
+|---------|-----------|-------|-------------|
+| Planning | Upfront, all steps | Iterative, step-by-step | DAG with dependencies |
+| Execution | Sequential | Iterative | Parallel where possible |
+| Adaptability | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) |
+| Complexity | Simple | Moderate | Complex |
+| Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks |
+| Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) |
 
 ## License
 
@@ -327,3 +554,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 For issues and questions, please open an issue on the GitHub repository.
+
+## References
+
+- **ReAct**: [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
+- **LLMCompiler**: [LLMCompiler: Optimizing LLM Queries](https://arxiv.org/abs/2312.04511)
+- **COTA**: Calibration of Thoughts and Actions (implementation reference)
+
+## Additional Resources
+
+- **Repository**: [https://gitcode.com/gabrielyuyang/clia](https://gitcode.com/gabrielyuyang/clia)
+- **Agent Documentation**: See the `*.md` files in the repository root for detailed agent documentation
+- **Examples**: Check the `examples/` directory for usage examples

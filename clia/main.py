@@ -15,7 +15,7 @@ from .agents.reflection import (
 from .config import Settings
 from .utils import get_multiline_input
 
-COMMANDS = ("ask", "explain", "debug", "fix", "genarate")
+COMMANDS = ("ask", "explain", "debug", "fix", "generate")
 
 # 配置日志
 logging.basicConfig(
@@ -73,7 +73,7 @@ def parse_args() -> argparse.ArgumentParser:
             "--multiline",
             "-m",
             action="store_true",
-            help="Enable multiline input with 'EOF' as endding",
+            help="Enable multiline input with 'EOF' as ending",
         )
 
         command_parser.add_argument(
@@ -376,7 +376,12 @@ def main():
         sys.exit(1)
     except Exception as e:
         logger.error(f"Error: {e}")
-        if not args.quiet:
+        # Check if args exists before accessing args.quiet
+        try:
+            if not args.quiet:
+                print(f"\nError: {e}")
+        except NameError:
+            # args not defined yet, print error anyway
             print(f"\nError: {e}")
         sys.exit(1)
 

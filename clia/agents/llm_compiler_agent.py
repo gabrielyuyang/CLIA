@@ -10,7 +10,7 @@ Key features:
 3. Follows dependency order for sequential execution when needed
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 import json
 import re
 import logging
@@ -223,7 +223,7 @@ Now, generate the execution plan for the task below:"""
     return compiler_system_prompt
 
 
-def _execute_step(step: Dict, results: Dict[str, str]) -> tuple[str, str]:
+def _execute_step(step: Dict, results: Dict[str, str]) -> Tuple[str, str]:
     """Execute a single step and return (step_id, result)."""
     step_id = step.get("id", "unknown")
 
@@ -387,8 +387,9 @@ def llm_compiler_agent(
 
     # Extract and validate plan
     plan = _extract_plan(plan_response)
+    plan_valid = _validate_plan(plan)
 
-    if not _validate_plan(plan):
+    if not plan_valid:
         logger.error("Invalid plan generated - contains cycles or missing dependencies")
         return "Error: Generated plan is invalid (contains cycles or missing dependencies). Please try again."
 
