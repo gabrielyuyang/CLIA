@@ -270,6 +270,13 @@ def main():
                 if isinstance(full_response, str):
                     full_response = [full_response]
 
+        # Print final agent output (non-streaming)
+        if not args.quiet and not stream:
+            if isinstance(full_response, list):
+                print("".join(full_response))
+            else:
+                print(str(full_response))
+
         # Generate reflection if requested
         if args.with_reflection and execution_metadata:
             logger.info("\n" + "=" * 60)

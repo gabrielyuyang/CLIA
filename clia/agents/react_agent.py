@@ -179,31 +179,31 @@ def react_agent(
             "components": components
         })
 
-        # Check for final answer
-        if components["final_answer"]:
+        # Check if we have an action to execute FIRST
+        # (If LLM includes both Action and Final Answer, we should execute the action)
+        if components["action"]:
+            # We have an action - execute it even if there's also a final_answer
+            # (The LLM might have hallucinated an observation, so we need the real one)
+            pass  # Continue to tool execution below
+        elif components["final_answer"]:
+            # No action, but we have a final answer
             if verbose:
                 logger.info("Final answer received!")
             final_answer = components["final_answer"]
             full_response.append(final_answer)
-            if not stream:
-                print(final_answer)
             break
-
-        # Check if we have an action to execute
-        if not components["action"]:
-            # No action specified - might be a direct answer or malformed response
+        else:
+            # No action and no final answer - might be a direct answer or malformed response
             if verbose:
-                logger.warning("No action found in response, treating as final answer")
+                logger.warning("No action or final answer found in response, treating as final answer")
             # Try to extract any meaningful content
             if components["thought"]:
                 full_response.append(components["thought"])
-                if not stream:
-                    print(components["thought"])
             else:
                 full_response.append(response)
-                if not stream:
-                    print(response)
             break
+
+        # If we reach here, we have an action to execute
 
         # Execute the action
         action = components["action"]
@@ -231,14 +231,17 @@ def react_agent(
         try:
             if action not in TOOLS:
                 observation = f"Error: Unknown tool '{action}'. Available tools: {list(TOOLS.keys())}"
+                logger.warning(f"Unknown tool requested: {action}")
             else:
+                logger.info(f"Executing tool: {action} with args: {action_input}")
                 observation = run_tool(action, **action_input)
+                logger.info(f"Tool {action} executed successfully, result length: {len(observation)} chars")
         except Exception as e:
             observation = f"Error executing {action}: {str(e)}"
-            logger.error(f"Tool execution error: {e}")
+            logger.error(f"Tool execution error: {e}", exc_info=True)
 
         if verbose:
-            logger.info(f"Observation: {observation}")
+            logger.info(f"Observation: {observation[:200]}..." if len(observation) > 200 else f"Observation: {observation}")
 
         # Add to conversation history
         messages.append({"role": "assistant", "content": response})
@@ -259,12 +262,8 @@ def react_agent(
             # Try to extract a final answer from the last response
             if components["thought"]:
                 full_response.append(f"{components['thought']}\n\n[Note: Reached maximum iterations]")
-                if not stream:
-                    print(f"{components['thought']}\n\n[Note: Reached maximum iterations]")
             else:
                 full_response.append("I've reached the maximum number of iterations. Please refine your question or try again.")
-                if not stream:
-                    print("I've reached the maximum number of iterations. Please refine your question or try again.")
 
     response = full_response if full_response else ["No response generated"]
 
