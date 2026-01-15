@@ -38,18 +38,42 @@ def _planner(question: str,
              timeout: float) -> List[Dict]:
 
     # 获取任务特定的prompt
-    PLAN_PROMPT = """
-你是一个规划-执行助手，请先给出步骤计划。输出 JSON 数组，每个元素形如：
-{"action": "tool", "tool": "<name>", "args": {...}, "note": "why"}
-或 {"action": "final", "answer": "<string>"}
-规则：
-- 仅使用系统提示中列出的工具，不要编造。
-- 步数尽量精简，通常 1-3 步。
-- 如果已经能直接回答，给一个 final, 而且answer中不能包含tool。
-- 如果需要工具，先列出工具步骤，最后一个步骤给 final。"""
+    PLAN_PROMPT = f"""
+你是一个规划-执行助手，必须按以下规则生成步骤计划：
+
+1. 输出格式必须是 JSON 数组，每个元素包含以下两种结构之一：
+   - 工具步骤：{{"action": "tool", "tool": "<name>", "args": {...}, "note": "why"}}
+   - 最终步骤：{{"action": "final", "answer": "<string>"}}
+
+2. 可用工具规范：
+{tools_specs()}
+
+3. 强制规则：
+   - 必须以 {{"action": "final"}} 结尾，无论是否使用了工具
+   - 如果无需工具，直接返回 [{{"action": "final", "answer": "..."}}]
+   - 如果需要工具，格式为：[工具步骤1, ...,{{"action": "final", "answer": "..."}}]
+   - "answer" 字段中禁止出现任何工具名称或工具调用语法
+   - 工具参数必须严格符合工具规范要求
+
+4. 示例：
+   直接回答示例：
+   [{{"action": "final", "answer": "这是一个编程助手"}}]
+   需要工具示例：
+   [
+     {{"action": "tool", "tool": "read_file", "args": {{"path_str": "test.txt", "max_chars": 1000}}, "note": "读取文件内容"}},
+     {{"action": "final", "answer": "文件内容显示..."}}
+   ]
+
+5. 限制：
+   - 仅使用上述明确列出的工具
+   - 总步骤数控制在 1-3 步（含 final 步骤）
+   - 确保 JSON 格式严格有效
+   - 工具参数必须完整且符合 schema 定义
+"""
+    print(PLAN_PROMPT)
 
     messages = [
-        {"role": "system", "content": PLAN_PROMPT + "\n\n可用工具:\n" + tools_specs()},
+        {"role": "system", "content": PLAN_PROMPT},
         {"role": "user", "content": question}
     ]
 
