@@ -2,6 +2,8 @@
 
 This document describes the LLMCompiler agent implementation for CLIA.
 
+> **Note**: The LLMCompiler agent is experimental and may be deprecated in future versions. The Plan-Build agent is the default and recommended agent for most use cases.
+
 ## Overview
 
 The LLMCompiler agent compiles tasks into a Directed Acyclic Graph (DAG) of tool calls and executes them efficiently. Key features:
@@ -45,23 +47,49 @@ clia ask "Complex parallel task" --agent llm-compiler --with-reflection
 ### Programmatic Usage
 
 ```python
-from clia.agents.llm_compiler_agent import llm_compiler_agent
+from clia.agents.llm_compiler_agent import llm_compiler_agent, llm_compiler_agent_simple
+from clia.config import Settings
 
+settings = Settings.load_openai()
+
+# Using llm_compiler_agent (returns string or tuple if return_metadata=True)
 result = llm_compiler_agent(
     question="Read file1.txt and file2.txt, then compare them",
     command="ask",
-    api_key="your-api-key",
-    base_url="https://api.openai.com/v1",
-    max_retries=5,
-    model="gpt-4",
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
     stream=False,
-    temperature=0.0,
-    top_p=0.85,
-    frequency_penalty=0.0,
-    max_tokens=4096,
-    timeout=30.0,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds,
     verbose=True,
     return_metadata=False
+)
+
+# If return_metadata=True, result is a tuple: (final_answer, metadata_dict)
+if return_metadata:
+    final_answer, metadata = result
+else:
+    final_answer = result
+
+# Or use llm_compiler_agent_simple for a single string response
+result = llm_compiler_agent_simple(
+    question="Read file1.txt and file2.txt, then compare them",
+    command="ask",
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    stream=False,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds
 )
 ```
 
@@ -212,7 +240,7 @@ Execution Phase:
   Round 1 (parallel):
     - Execute read1: "Contents of file1..."
     - Execute read2: "Contents of file2..."
-  
+
   Round 2:
     - Execute final: "Comparison: ..."
 ```

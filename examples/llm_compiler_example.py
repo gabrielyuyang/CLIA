@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Example script demonstrating the ReAct agent usage.
+Example script demonstrating the LLMCompiler agent usage.
 
-This script shows how to use the ReAct agent programmatically.
-Demonstrates both react_agent (returns List[str]) and
-react_agent_simple (returns str).
+This script shows how to use the LLMCompiler agent programmatically.
+Demonstrates parallel execution capabilities.
 """
 
 import sys
@@ -13,14 +12,14 @@ from pathlib import Path
 # Add parent directory to path to import clia
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from clia.agents.react_agent import (  # noqa: E402
-    react_agent, react_agent_simple
+from clia.agents.llm_compiler_agent import (  # noqa: E402
+    llm_compiler_agent, llm_compiler_agent_simple
 )
 from clia.config import Settings  # noqa: E402
 
 
 def main():
-    """Example usage of ReAct agent."""
+    """Example usage of LLMCompiler agent."""
     # Load settings
     try:
         settings = Settings.load_openai()
@@ -29,28 +28,28 @@ def main():
         print("Please set OPENAI_API_KEY environment variable.")
         return
 
-    # Example question
-    question = "Read the file README.md and tell me what it says"
+    # Example question that benefits from parallel execution
+    question = "Read README.md and setup.py, then compare their purposes"
 
     print("=" * 60)
-    print("ReAct Agent Example")
+    print("LLMCompiler Agent Example")
     print("=" * 60)
     print(f"\nQuestion: {question}\n")
+    print("Note: This agent can execute independent steps in parallel.")
 
-    # Example 1: Using react_agent_simple (returns single string)
+    # Example 1: Using llm_compiler_agent_simple (returns single string)
     print("\n" + "-" * 60)
-    print("Example 1: Using react_agent_simple")
+    print("Example 1: Using llm_compiler_agent_simple")
     print("-" * 60)
     try:
-        response = react_agent_simple(
+        response = llm_compiler_agent_simple(
             question=question,
             command="ask",
-            max_iterations=5,
             api_key=settings.api_key,
             base_url=settings.base_url,
             max_retries=settings.max_retries,
             model=settings.model,
-            stream=settings.stream,
+            stream=False,
             temperature=settings.temperature,
             top_p=settings.top_p,
             frequency_penalty=settings.frequency_penalty,
@@ -66,15 +65,14 @@ def main():
         import traceback
         traceback.print_exc()
 
-    # Example 2: Using react_agent (returns List[str], supports metadata)
+    # Example 2: Using llm_compiler_agent with metadata
     print("\n" + "-" * 60)
-    print("Example 2: Using react_agent with metadata")
+    print("Example 2: Using llm_compiler_agent with metadata")
     print("-" * 60)
     try:
-        result = react_agent(
+        result = llm_compiler_agent(
             question=question,
             command="ask",
-            max_iterations=5,
             api_key=settings.api_key,
             base_url=settings.base_url,
             max_retries=settings.max_retries,
@@ -89,18 +87,23 @@ def main():
             return_metadata=True
         )
 
-        # react_agent returns tuple when return_metadata=True
-        response_list, metadata = result
-        response = "".join(response_list)
+        # llm_compiler_agent returns tuple when return_metadata=True
+        final_answer, metadata = result
 
         print("\nFinal Response:")
-        print(response)
+        print(final_answer)
 
         print("\nExecution Metadata:")
-        print(f"  Iterations used: {metadata.get('iterations_used', 'N/A')}")
-        print(f"  Tools used: {metadata.get('tools_used', [])}")
-        turns = metadata.get('conversation_turns', 'N/A')
-        print(f"  Conversation turns: {turns}")
+        print(f"  Plan valid: {metadata.get('plan_valid', 'N/A')}")
+        print(f"  Total steps: {len(metadata.get('plan', []))}")
+        exec_results = metadata.get('execution_results', {})
+        print(f"  Steps executed: {len(exec_results)}")
+        if metadata.get('plan'):
+            plan = metadata['plan']
+            parallel_ops = sum(
+                1 for step in plan if not step.get('dependencies')
+            )
+            print(f"  Parallel opportunities: {parallel_ops}")
 
     except Exception as e:
         print(f"\nError: {e}")

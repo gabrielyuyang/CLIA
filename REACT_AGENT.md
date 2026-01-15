@@ -2,6 +2,8 @@
 
 This document describes the ReAct (Reasoning + Acting) agent implementation for CLIA.
 
+> **Note**: The ReAct agent is experimental and may be deprecated in future versions. The Plan-Build agent is the default and recommended agent for most use cases.
+
 ## Overview
 
 The ReAct agent follows an iterative pattern where the agent:
@@ -42,16 +44,48 @@ clia ask "Complex task" --agent react --max-iterations 15
 ### Programmatic Usage
 
 ```python
-from clia.agents.react_agent import react_agent
+from clia.agents.react_agent import react_agent, react_agent_simple
+from clia.config import Settings
 
+settings = Settings.load_openai()
+
+# Using react_agent (returns List[str] for streaming compatibility)
+# If return_metadata=True, returns tuple of (response_list, metadata_dict)
 responses = react_agent(
     question="What is in file.txt?",
     command="ask",
     max_iterations=10,
-    api_key="your-api-key",
-    base_url="https://api.openai.com/v1",
-    model="gpt-4",
-    verbose=True
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    stream=False,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds,
+    verbose=True,
+    return_metadata=False
+)
+# responses is a list of strings, join them for full response
+response = "".join(responses)
+
+# Or use react_agent_simple for a single string response
+response = react_agent_simple(
+    question="What is in file.txt?",
+    command="ask",
+    max_iterations=10,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    stream=False,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds
 )
 ```
 
@@ -78,19 +112,24 @@ Final Answer: [your final answer to the user's question]
 ## Features
 
 1. **Iterative Reasoning**: The agent can reason after each tool execution, allowing it to adapt to unexpected results
-2. **Tool Integration**: Uses the same tool system as Plan-Build agent (read_file, echo, http_get)
+2. **Tool Integration**: Uses the same tool system as other agents (read_file, echo, http_get)
 3. **Error Handling**: Gracefully handles tool failures and malformed responses
 4. **Verbose Mode**: Can show intermediate reasoning steps for debugging
 5. **Streaming Support**: Compatible with streaming LLM responses
+6. **Metadata Support**: Can return execution metadata for reflection and analysis
+7. **Task-Specific Prompts**: Uses command-specific prompts for better task understanding
 
-## Comparison with Plan-Build Agent
+## Comparison with Other Agents
 
-| Feature | Plan-Build | ReAct |
-|---------|-----------|-------|
-| Planning | Upfront, all steps | Iterative, step-by-step |
-| Adaptability | Low (fixed plan) | High (reacts to observations) |
-| Complexity | Simpler | More complex |
-| Best For | Simple, predictable tasks | Complex, exploratory tasks |
+| Feature | Plan-Build | ReAct | LLMCompiler |
+|---------|-----------|-------|-------------|
+| Planning | Upfront, all steps | Iterative, step-by-step | DAG with dependencies |
+| Execution | Sequential | Iterative | Parallel where possible |
+| Adaptability | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) |
+| Complexity | Simple | Moderate | Complex |
+| Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks |
+| Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) |
+| Return Metadata | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
 
 ## Implementation Details
 

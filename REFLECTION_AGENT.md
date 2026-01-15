@@ -44,8 +44,16 @@ clia ask "Read multiple files" --agent llm-compiler --with-reflection
 ### Programmatic Usage
 
 ```python
-from clia.agents.reflection import reflect_plan_build_agent
+from clia.agents.reflection import (
+    reflect_plan_build_agent,
+    reflect_react_agent,
+    reflect_llm_compiler_agent
+)
+from clia.config import Settings
 
+settings = Settings.load_openai()
+
+# Example: Reflect on Plan-Build agent execution
 reflection = reflect_plan_build_agent(
     question="What is in file.txt?",
     plan=[...],  # The plan that was executed
@@ -53,13 +61,57 @@ reflection = reflect_plan_build_agent(
     final_answer="The file contains...",
     steps_executed=2,
     max_steps=5,
-    api_key="your-api-key",
-    base_url="https://api.openai.com/v1",
-    model="gpt-4",
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    temperature=0.3,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=2048,
+    timeout=settings.timeout_seconds,
     verbose=True
 )
 
 print(reflection)
+
+# Example: Reflect on ReAct agent execution
+reflection = reflect_react_agent(
+    question="What is in file.txt?",
+    conversation_history=[...],  # List of conversation turns
+    final_answer="The file contains...",
+    iterations_used=3,
+    max_iterations=10,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    temperature=0.3,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=2048,
+    timeout=settings.timeout_seconds,
+    verbose=True
+)
+
+# Example: Reflect on LLMCompiler agent execution
+reflection = reflect_llm_compiler_agent(
+    question="Read file1.txt and file2.txt",
+    plan=[...],  # The DAG plan
+    execution_results={...},  # Dictionary mapping step IDs to results
+    final_answer="Comparison result...",
+    plan_valid=True,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    temperature=0.3,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=2048,
+    timeout=settings.timeout_seconds,
+    verbose=True
+)
 ```
 
 ## Reflection Output Format

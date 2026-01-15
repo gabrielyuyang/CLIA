@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """
-Example script demonstrating the ReAct agent usage.
+Example script demonstrating the Plan-Build agent usage.
 
-This script shows how to use the ReAct agent programmatically.
-Demonstrates both react_agent (returns List[str]) and
-react_agent_simple (returns str).
+This script shows how to use the Plan-Build agent programmatically.
 """
 
 import sys
@@ -13,14 +11,12 @@ from pathlib import Path
 # Add parent directory to path to import clia
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from clia.agents.react_agent import (  # noqa: E402
-    react_agent, react_agent_simple
-)
+from clia.agents.plan_build_agent import plan_build  # noqa: E402
 from clia.config import Settings  # noqa: E402
 
 
 def main():
-    """Example usage of ReAct agent."""
+    """Example usage of Plan-Build agent."""
     # Load settings
     try:
         settings = Settings.load_openai()
@@ -30,51 +26,22 @@ def main():
         return
 
     # Example question
-    question = "Read the file README.md and tell me what it says"
+    question = "Read the file README.md and summarize its main features"
 
     print("=" * 60)
-    print("ReAct Agent Example")
+    print("Plan-Build Agent Example")
     print("=" * 60)
     print(f"\nQuestion: {question}\n")
 
-    # Example 1: Using react_agent_simple (returns single string)
+    # Example 1: Basic usage without metadata
     print("\n" + "-" * 60)
-    print("Example 1: Using react_agent_simple")
+    print("Example 1: Basic usage")
     print("-" * 60)
     try:
-        response = react_agent_simple(
+        response = plan_build(
             question=question,
             command="ask",
-            max_iterations=5,
-            api_key=settings.api_key,
-            base_url=settings.base_url,
-            max_retries=settings.max_retries,
-            model=settings.model,
-            stream=settings.stream,
-            temperature=settings.temperature,
-            top_p=settings.top_p,
-            frequency_penalty=settings.frequency_penalty,
-            max_tokens=settings.max_tokens,
-            timeout=settings.timeout_seconds
-        )
-
-        print("\nFinal Response:")
-        print(response)
-
-    except Exception as e:
-        print(f"\nError: {e}")
-        import traceback
-        traceback.print_exc()
-
-    # Example 2: Using react_agent (returns List[str], supports metadata)
-    print("\n" + "-" * 60)
-    print("Example 2: Using react_agent with metadata")
-    print("-" * 60)
-    try:
-        result = react_agent(
-            question=question,
-            command="ask",
-            max_iterations=5,
+            max_steps=5,
             api_key=settings.api_key,
             base_url=settings.base_url,
             max_retries=settings.max_retries,
@@ -85,22 +52,50 @@ def main():
             frequency_penalty=settings.frequency_penalty,
             max_tokens=settings.max_tokens,
             timeout=settings.timeout_seconds,
-            verbose=True,
-            return_metadata=True
+            return_metadata=False
         )
-
-        # react_agent returns tuple when return_metadata=True
-        response_list, metadata = result
-        response = "".join(response_list)
 
         print("\nFinal Response:")
         print(response)
 
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # Example 2: With metadata for reflection
+    print("\n" + "-" * 60)
+    print("Example 2: With metadata")
+    print("-" * 60)
+    try:
+        result = plan_build(
+            question=question,
+            command="ask",
+            max_steps=5,
+            api_key=settings.api_key,
+            base_url=settings.base_url,
+            max_retries=settings.max_retries,
+            model=settings.model,
+            stream=False,
+            temperature=settings.temperature,
+            top_p=settings.top_p,
+            frequency_penalty=settings.frequency_penalty,
+            max_tokens=settings.max_tokens,
+            timeout=settings.timeout_seconds,
+            return_metadata=True
+        )
+
+        # plan_build returns tuple when return_metadata=True
+        final_answer, metadata = result
+
+        print("\nFinal Response:")
+        print(final_answer)
+
         print("\nExecution Metadata:")
-        print(f"  Iterations used: {metadata.get('iterations_used', 'N/A')}")
-        print(f"  Tools used: {metadata.get('tools_used', [])}")
-        turns = metadata.get('conversation_turns', 'N/A')
-        print(f"  Conversation turns: {turns}")
+        print(f"  Steps executed: {metadata.get('steps_executed', 'N/A')}")
+        print(f"  Max steps: {metadata.get('max_steps', 'N/A')}")
+        print(f"  Plan length: {len(metadata.get('plan', []))}")
+        print(f"  Tools used: {[step.get('tool') for step in metadata.get('plan', []) if step.get('action') == 'tool']}")
 
     except Exception as e:
         print(f"\nError: {e}")

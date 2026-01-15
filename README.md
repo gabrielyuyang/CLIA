@@ -59,6 +59,8 @@ CLIA requires the following dependencies (automatically installed with pip insta
 - `pydantic` - For data validation
 - `tqdm` - For progress bars
 
+See `requirements.txt` for the complete list of dependencies with versions.
+
 ## Configuration
 
 ### Environment Variables
@@ -189,8 +191,8 @@ clia generate "Write a web scraper for news articles"
 
 #### Advanced Features
 
-- `--with-calibration` - Enable calibration mode for testing and validation
-- `--with-interaction` - Enable interactive mode
+- `--with-calibration` - Enable calibration mode for testing and validation (planned feature, not yet fully implemented)
+- `--with-interaction` - Enable interactive mode (planned feature, not yet fully implemented)
 - `--with-reflection` - Enable reflection mode - agent will self-critique its performance
 
 ### Usage Examples
@@ -336,10 +338,10 @@ CLIA provides the following built-in tools:
 
 - **`read_file`**: Read local files with size limits
   - Args: `path_str` (file path), `max_chars` (max characters, default: 4000)
-  
+
 - **`echo`**: Echo text with size validation
   - Args: `text` (text to echo), `max_chars` (max characters, default: 4000)
-  
+
 - **`http_get`**: Perform HTTP GET requests with timeout handling
   - Args: `url` (target URL), `timeout` (timeout in seconds, default: 10.0)
 
@@ -426,7 +428,7 @@ clia ask "Simple answer" --output-format text
 
 ### Calibration Mode
 
-Enable calibration to test and validate code during generation:
+Enable calibration to test and validate code during generation (planned feature, not yet fully implemented):
 
 ```bash
 clia generate "Create a sorting algorithm" --with-calibration
@@ -444,25 +446,29 @@ clia ask "Complex task" --agent react --with-reflection --verbose
 
 ```
 clia/
-├── agents/
-│   ├── __init__.py
-│   ├── history.py              # Conversation history management
-│   ├── llm.py                  # LLM API interface
-│   ├── llm_compiler_agent.py   # LLMCompiler agent implementation
-│   ├── plan_build_agent.py     # Plan-build orchestration
-│   ├── prompts.py              # Task-specific prompts
-│   ├── react_agent.py          # ReAct agent implementation
-│   ├── reflection.py           # Reflection and self-critique
-│   ├── tool_router.py          # Tool routing and execution
-│   └── tools.py                # Available tools (read_file, echo, http_get)
-├── histories/                  # Conversation history storage (JSONL files)
-├── tests/                      # Test files
-├── config.py                   # Configuration management
-├── main.py                     # CLI entry point
-├── utils.py                    # Utility functions
-└── __init__.py
-examples/                       # Example scripts
-├── react_example.py            # ReAct agent usage example
+├── clia/                       # Main package directory
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── history.py              # Conversation history management
+│   │   ├── llm.py                  # LLM API interface
+│   │   ├── llm_compiler_agent.py   # LLMCompiler agent implementation
+│   │   ├── plan_build_agent.py     # Plan-build orchestration
+│   │   ├── prompts.py              # Task-specific prompts
+│   │   ├── react_agent.py          # ReAct agent implementation
+│   │   ├── reflection.py           # Reflection and self-critique
+│   │   ├── tool_router.py          # Tool routing and execution
+│   │   └── tools.py                # Available tools (read_file, echo, http_get)
+│   ├── histories/                  # Conversation history storage (JSONL files)
+│   ├── tests/                      # Test files
+│   ├── config.py                   # Configuration management
+│   ├── main.py                     # CLI entry point
+│   ├── utils.py                    # Utility functions
+│   └── __init__.py
+├── examples/                       # Example scripts
+│   └── react_example.py            # ReAct agent usage example
+├── setup.py                        # Package setup configuration
+├── requirements.txt                # Python dependencies
+└── README.md                       # This file
 ```
 
 ## Documentation
@@ -486,20 +492,72 @@ python -m pytest tests/
 
 You can also use CLIA agents programmatically:
 
+#### Using ReAct Agent
+
 ```python
-from clia.agents.react_agent import react_agent
+from clia.agents.react_agent import react_agent, react_agent_simple
 from clia.config import Settings
 
 settings = Settings.load_openai()
 
-response = react_agent(
+# Using react_agent (returns List[str] for streaming compatibility)
+response_list = react_agent(
     question="What is in file.txt?",
     command="ask",
     max_iterations=10,
     api_key=settings.api_key,
     base_url=settings.base_url,
     model=settings.model,
+    stream=False,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds,
     verbose=True
+)
+# response_list is a list of strings, join them for full response
+response = "".join(response_list)
+
+# Or use react_agent_simple for a single string response
+response = react_agent_simple(
+    question="What is in file.txt?",
+    command="ask",
+    max_iterations=10,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    model=settings.model,
+    stream=False,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds
+)
+```
+
+#### Using Plan-Build Agent
+
+```python
+from clia.agents.plan_build_agent import plan_build
+from clia.config import Settings
+
+settings = Settings.load_openai()
+
+response = plan_build(
+    question="What is in file.txt?",
+    command="ask",
+    max_steps=5,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
+    stream=False,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds
 )
 ```
 
@@ -542,6 +600,7 @@ The `read_file` tool has a default 4000 character limit. Adjust in your code if 
 | Complexity | Simple | Moderate | Complex |
 | Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks |
 | Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) |
+| Return Metadata | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
 
 ## License
 

@@ -44,22 +44,33 @@ clia ask "Complex task" --agent plan-build --with-reflection
 
 ```python
 from clia.agents.plan_build_agent import plan_build
+from clia.config import Settings
 
+settings = Settings.load_openai()
+
+# plan_build returns a string (or tuple if return_metadata=True)
 result = plan_build(
     question="What is in file.txt?",
     command="ask",
     max_steps=5,
-    api_key="your-api-key",
-    base_url="https://api.openai.com/v1",
-    model="gpt-4",
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    max_retries=settings.max_retries,
+    model=settings.model,
     stream=False,
-    temperature=0.0,
-    top_p=0.85,
-    frequency_penalty=0.0,
-    max_tokens=4096,
-    timeout=30.0,
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    frequency_penalty=settings.frequency_penalty,
+    max_tokens=settings.max_tokens,
+    timeout=settings.timeout_seconds,
     return_metadata=False
 )
+
+# If return_metadata=True, result is a tuple: (final_answer, metadata_dict)
+if return_metadata:
+    final_answer, metadata = result
+else:
+    final_answer = result
 ```
 
 ## Plan-Build Pattern Format
@@ -109,7 +120,8 @@ The agent expects LLM responses in this format during the planning phase:
 | Adaptability | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) |
 | Complexity | Simple | Moderate | Complex |
 | Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks |
-| Max Steps | Configurable (default: 5) | Configurable iterations (default: 10) | Unlimited (DAG-based) |
+| Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) |
+| Return Metadata | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
 
 ## Implementation Details
 
@@ -173,7 +185,7 @@ Planning Phase:
 Building Phase:
   Step 1: Execute read_file("file.txt")
     Result: "File contents here..."
-  
+
   Step 2: Generate final answer
     Input: Question + Tool results
     Output: "The file contains: ..."
