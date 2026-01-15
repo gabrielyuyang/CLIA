@@ -359,10 +359,9 @@ def llm_compiler_agent(
         {"role": "user", "content": question}
     ]
 
-    if verbose:
-        logger.info("=" * 60)
-        logger.info("PHASE 1: Planning - Generating execution plan")
-        logger.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info("PHASE 1: Planning - Generating execution plan")
+    logger.info("=" * 60)
 
     try:
         plan_response = llm.openai_completion(
@@ -382,8 +381,7 @@ def llm_compiler_agent(
         logger.error(f"LLM call failed during planning: {e}")
         return f"Error: Failed to get plan from LLM: {e}"
 
-    if verbose:
-        logger.info(f"\n[Planning Response]\n{plan_response}\n")
+    logger.info(f"\n[Planning Response]\n{plan_response}\n")
 
     # Extract and validate plan
     plan = _extract_plan(plan_response)
@@ -393,43 +391,86 @@ def llm_compiler_agent(
         logger.error("Invalid plan generated - contains cycles or missing dependencies")
         return "Error: Generated plan is invalid (contains cycles or missing dependencies). Please try again."
 
-    if verbose:
-        logger.info(f"Plan validated: {len(plan)} steps")
-        for step in plan:
-            deps = step.get("dependencies", [])
-            logger.info(f"  - {step.get('id')}: {step.get('tool', step.get('action', 'unknown'))} (deps: {deps})")
+    logger.info(f"Plan validated: {len(plan)} steps")
+    for step in plan:
+        deps = step.get("dependencies", [])
+        logger.info(f"  - {step.get('id')}: {step.get('tool', step.get('action', 'unknown'))} (deps: {deps})")
 
     # Phase 2: Execution - Execute the plan respecting dependencies
-    if verbose:
-        logger.info("\n" + "=" * 60)
-        logger.info("PHASE 2: Execution - Running tool calls in parallel where possible")
-        logger.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info("PHASE 2: Execution - Running tool calls in parallel where possible")
+    logger.info("=" * 60)
 
     results = _execute_plan_parallel(plan)
 
-    if verbose:
-        logger.info(f"\nExecution completed: {len(results)} results")
-        for step_id, result in results.items():
-            logger.info(f"  - {step_id}: {result[:100]}...")
+    logger.info(f"Execution completed: {len(results)} results")
+    for step_id, result in results.items():
+        logger.info(f"  - {step_id}: {result[:500]}...")
 
+    logger.info("=" * 60)
+    logger.info("Phase 3: Final Answer - Extract final answer or synthesize from results")
+    logger.info("=" * 60)
+    
     # Phase 3: Final Answer - Extract final answer or synthesize from results
     final_steps = [step for step in plan if step.get("action") == "final"]
 
     if final_steps:
-        # Use the final step's answer, potentially enriched with tool results
+        # Use the final step's answer, enriched with actual tool results
         final_step = final_steps[0]
         final_id = final_step.get("id", "final")
+        base_answer = final_step.get("answer", "")
 
-        if final_id in results:
-            final_answer = results[final_id]
+        # Check if there are tool results to incorporate
+        tool_results = {k: v for k, v in results.items() if k != final_id}
+        
+        if tool_results:
+            # Synthesize answer using tool results
+            results_summary = "\n".join([
+                f"{step_id}: {result[:500]}"
+                for step_id, result in tool_results.items()
+            ])
+            
+            synthesis_prompt = f"""Based on the following tool execution results, provide a comprehensive final answer to the user's question.
+
+Question: {question}
+
+Tool Results:
+{results_summary}
+
+Initial Answer: {base_answer}
+
+Please provide a clear, comprehensive final answer that incorporates all relevant information from the tool results:"""
+            
+            messages_synthesis = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": synthesis_prompt}
+            ]
+            
+            try:
+                final_answer = llm.openai_completion(
+                    api_key=api_key,
+                    base_url=base_url,
+                    max_retries=max_retries,
+                    model=model,
+                    messages=messages_synthesis,
+                    stream=stream,
+                    temperature=temperature,
+                    top_p=top_p,
+                    frequency_penalty=frequency_penalty,
+                    max_tokens=max_tokens,
+                    timeout=timeout
+                )
+                logger.info("Successfully synthesized final answer from tool results")
+            except Exception as e:
+                logger.error(f"Failed to synthesize final answer: {e}")
+                # Fall back to base answer with results appended
+                final_answer = f"{base_answer}\n\nTool Results:\n{results_summary}"
         else:
-            # If we have tool results, we might want to synthesize a better answer
-            # For now, use the answer from the plan
-            final_answer = final_step.get("answer", "No final answer provided")
+            # No tool results, use the base answer
+            final_answer = base_answer
     else:
         # No explicit final step - synthesize answer from results
-        if verbose:
-            logger.warning("No final step found in plan, synthesizing answer from results")
+        logger.warning("No final step found in plan, synthesizing answer from results")
 
         # Get results summary
         results_summary = "\n".join([
