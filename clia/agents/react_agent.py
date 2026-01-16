@@ -105,7 +105,8 @@ def react_agent(
     max_tokens: int = 4096,
     timeout: float = 30.0,
     verbose: bool = False,
-    return_metadata: bool = False
+    return_metadata: bool = False,
+    memory_manager = None
 ) -> List[str]:
     """
     Run a ReAct agent to solve a task.
@@ -266,6 +267,23 @@ def react_agent(
                 full_response.append("I've reached the maximum number of iterations. Please refine your question or try again.")
 
     response = full_response if full_response else ["No response generated"]
+    
+    # Save to memory if memory manager is available
+    if memory_manager:
+        try:
+            final_answer_str = "".join(response) if isinstance(response, list) else str(response)
+            memory_manager.add_memory(
+                question=question,
+                answer=final_answer_str,
+                command=command,
+                agent_type="react",
+                metadata={
+                    "iterations_used": iteration + 1,
+                    "max_iterations": max_iterations
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save memory: {e}")
 
     if return_metadata:
         final_answer_str = "".join(response) if isinstance(response, list) else str(response)

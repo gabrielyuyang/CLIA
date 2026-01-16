@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from .agents.history import History
+from .agents.memory import MemoryManager
 from .agents.plan_build_agent import plan_build
 from .agents.react_agent import react_agent
 from .agents.llm_compiler_agent import llm_compiler_agent
@@ -154,6 +155,39 @@ def parse_args() -> argparse.ArgumentParser:
             default=10,
             help="Maximum iterations for ReAct agent (default: 10)"
         )
+        
+        # Memory management options
+        command_parser.add_argument(
+            "--memory-path",
+            type=Path,
+            help="Path to memory storage file (enables memory management)"
+        )
+        
+        command_parser.add_argument(
+            "--enable-memory",
+            action="store_true",
+            help="Enable memory management (uses default memory path)"
+        )
+        
+        command_parser.add_argument(
+            "--memory-limit",
+            type=int,
+            default=100,
+            help="Maximum number of memories before summarization (default: 100)"
+        )
+        
+        command_parser.add_argument(
+            "--no-memory-summarization",
+            action="store_true",
+            help="Disable automatic memory summarization"
+        )
+        
+        command_parser.add_argument(
+            "--memory-context-limit",
+            type=int,
+            default=3,
+            help="Maximum number of relevant memories to include in context (default: 3)"
+        )
     return parser.parse_args()
 
 
@@ -191,6 +225,26 @@ def main():
         temperature = args.temperature or settings.temperature
         top_p = args.top_p or settings.top_p
         max_retries = args.max_retries or settings.max_retries
+        
+        # Initialize memory manager if enabled
+        memory_manager = None
+        if args.enable_memory or args.memory_path:
+            memory_path = args.memory_path or Path("clia/memories/memory.jsonl")
+            try:
+                memory_manager = MemoryManager(
+                    memory_path=memory_path,
+                    max_memories=args.memory_limit,
+                    enable_summarization=not args.no_memory_summarization,
+                    api_key=settings.api_key,
+                    base_url=settings.base_url,
+                    model=model,
+                    max_retries=max_retries,
+                    timeout=settings.timeout_seconds
+                )
+                logger.info(f"Memory management enabled: {memory_path}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize memory manager: {e}")
+                memory_manager = None
 
         # 选择agent架构
         execution_metadata = None
@@ -211,7 +265,8 @@ def main():
                 max_tokens=settings.max_tokens,
                 timeout=settings.timeout_seconds,
                 verbose=args.verbose,
-                return_metadata=args.with_reflection
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
             )
             if args.with_reflection:
                 full_response, execution_metadata = result
@@ -233,7 +288,8 @@ def main():
                 max_tokens=settings.max_tokens,
                 timeout=settings.timeout_seconds,
                 verbose=args.verbose,
-                return_metadata=args.with_reflection
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
             )
             if args.with_reflection:
                 full_response, execution_metadata = result
@@ -260,7 +316,8 @@ def main():
                 frequency_penalty=settings.frequency_penalty,
                 max_tokens=settings.max_tokens,
                 timeout=settings.timeout_seconds,
-                return_metadata=args.with_reflection
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
             )
             if args.with_reflection:
                 full_response, execution_metadata = result

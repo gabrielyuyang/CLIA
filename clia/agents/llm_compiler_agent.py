@@ -327,7 +327,8 @@ def llm_compiler_agent(
     max_tokens: int = 4096,
     timeout: float = 30.0,
     verbose: bool = False,
-    return_metadata: bool = False
+    return_metadata: bool = False,
+    memory_manager = None
 ) -> str:
     """
     Run an LLMCompiler agent to solve a task.
@@ -510,6 +511,23 @@ Provide a clear, concise final answer:"""
         except Exception as e:
             logger.error(f"Failed to synthesize final answer: {e}")
             final_answer = f"Tool execution completed but failed to generate final answer: {e}\n\nResults:\n{results_summary}"
+
+    # Save to memory if memory manager is available
+    if memory_manager:
+        try:
+            memory_manager.add_memory(
+                question=question,
+                answer=final_answer,
+                command=command,
+                agent_type="llm-compiler",
+                metadata={
+                    "plan_length": len(plan),
+                    "plan_valid": plan_valid,
+                    "steps_executed": len(results)
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save memory: {e}")
 
     if return_metadata:
         metadata = {

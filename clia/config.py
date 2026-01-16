@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from typing import Optional
 from dotenv import load_dotenv
 from .utils import to_bool
 
@@ -20,6 +21,10 @@ class Settings:
     max_retries: int
     top_p: float
     frequency_penalty: float
+    memory_path: Optional[str] = None
+    enable_memory: bool = False
+    memory_limit: int = 100
+    memory_summarization: bool = True
 
     @classmethod
     def load_openai(cls):
@@ -38,7 +43,11 @@ class Settings:
             max_retries=int(os.getenv('OPENAI_MAX_RETRIES', '5')),
             timeout_seconds=int(os.getenv('OPENAI_TIMEOUT_SECONDS', '30')),
             top_p=float(os.getenv('OPENAI_TOP_P', '0.85')),
-            frequency_penalty=float(os.getenv('OPENAI_FREQUENCY_PENALTY', '0'))
+            frequency_penalty=float(os.getenv('OPENAI_FREQUENCY_PENALTY', '0')),
+            memory_path=os.getenv('CLIA_MEMORY_PATH', None),
+            enable_memory=to_bool(os.getenv('CLIA_ENABLE_MEMORY', 'False')),
+            memory_limit=int(os.getenv('CLIA_MEMORY_LIMIT', '100')),
+            memory_summarization=to_bool(os.getenv('CLIA_MEMORY_SUMMARIZATION', 'True'))
         )
 
 

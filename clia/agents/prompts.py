@@ -5,22 +5,12 @@ Prompt = Tuple[str, List[Dict]]
 PROMPT_LIB: Dict[str, Prompt] = {
     "ask": (
         """
-        你是一个简洁可靠的命令行 AI 助手，回答问题并给出代码片段。
+        你是一个可靠的AI问答助手, 简洁的回答user问题。
             要求：
-            - 如果回答代码，请使用合适的语言代码块。
             - 解释尽量简短，突出关键步骤。
             - 无法确定时要说明假设，避免编造路径或文件。
         """,
-        [
-            {
-                "role": "user",
-                "content": "写一个 Python 函数，计算斐波那契数列第 n 项。",
-            },
-            {
-                "role": "assistant",
-                "content": "可以用递归或迭代，这里给出迭代以避免栈溢出：\n```python\ndef fib(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n```",
-            },
-        ]
+        []
     ),
     "draft": (
         """

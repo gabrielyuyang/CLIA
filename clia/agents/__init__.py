@@ -8,6 +8,7 @@ prompt management, conversation history, and reflection capabilities.
 from .llm import openai_completion
 from .prompts import get_prompt
 from .history import History
+from .memory import MemoryManager, MemoryEntry
 from .react_agent import react_agent, react_agent_simple
 from .plan_build_agent import plan_build
 from .llm_compiler_agent import llm_compiler_agent, llm_compiler_agent_simple
@@ -23,6 +24,8 @@ __all__ = [
     "openai_completion",
     "get_prompt",
     "History",
+    "MemoryManager",
+    "MemoryEntry",
     "react_agent",
     "react_agent_simple",
     "plan_build",
