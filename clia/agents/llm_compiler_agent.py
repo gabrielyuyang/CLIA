@@ -354,6 +354,32 @@ def llm_compiler_agent(
     """
     system_prompt = _build_compiler_prompt(command)
 
+    # Get recent memory context if available
+    memory_context = ""
+    if memory_manager and memory_manager.memories:
+        from datetime import datetime, timedelta
+        recent_memories = []
+        for mem in memory_manager.memories:
+            try:
+                mem_time = datetime.fromisoformat(mem.timestamp)
+                if (datetime.now() - mem_time) < timedelta(hours=1):
+                    recent_memories.append(mem)
+            except Exception:
+                pass
+
+        # Get the most recent memories (up to 3)
+        recent_memories = sorted(recent_memories, key=lambda m: m.timestamp, reverse=True)[:3]
+
+        if recent_memories:
+            memory_context = "\n\n## Previous Conversation Context:\n"
+            for i, mem in enumerate(recent_memories, 1):
+                memory_context += f"{i}. User asked: {mem.question}\n   Assistant answered: {mem.answer[:200]}{'...' if len(mem.answer) > 200 else ''}\n"
+            memory_context += "\nIf the current question relates to previous conversations (e.g., 'add 1 more', 'continue', 'what about next', etc.), please refer to the above context to understand the user's intent.\n"
+
+    # Append memory context to system prompt if available
+    if memory_context:
+        system_prompt = system_prompt.rstrip() + memory_context
+
     # Phase 1: Planning - Get the DAG plan from LLM
     messages = [
         {"role": "system", "content": system_prompt},
@@ -411,7 +437,7 @@ def llm_compiler_agent(
     logger.info("=" * 60)
     logger.info("Phase 3: Final Answer - Extract final answer or synthesize from results")
     logger.info("=" * 60)
-    
+
     # Phase 3: Final Answer - Extract final answer or synthesize from results
     final_steps = [step for step in plan if step.get("action") == "final"]
 
@@ -423,14 +449,14 @@ def llm_compiler_agent(
 
         # Check if there are tool results to incorporate
         tool_results = {k: v for k, v in results.items() if k != final_id}
-        
+
         if tool_results:
             # Synthesize answer using tool results
             results_summary = "\n".join([
                 f"{step_id}: {result[:500]}"
                 for step_id, result in tool_results.items()
             ])
-            
+
             synthesis_prompt = f"""Based on the following tool execution results, provide a comprehensive final answer to the user's question.
 
 Question: {question}
@@ -441,12 +467,12 @@ Tool Results:
 Initial Answer: {base_answer}
 
 Please provide a clear, comprehensive final answer that incorporates all relevant information from the tool results:"""
-            
+
             messages_synthesis = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": synthesis_prompt}
             ]
-            
+
             try:
                 final_answer = llm.openai_completion(
                     api_key=api_key,

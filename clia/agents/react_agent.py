@@ -133,6 +133,32 @@ def react_agent(
     """
     system_prompt = _build_react_prompt(command)
 
+    # Get recent memory context if available
+    memory_context = ""
+    if memory_manager and memory_manager.memories:
+        from datetime import datetime, timedelta
+        recent_memories = []
+        for mem in memory_manager.memories:
+            try:
+                mem_time = datetime.fromisoformat(mem.timestamp)
+                if (datetime.now() - mem_time) < timedelta(hours=1):
+                    recent_memories.append(mem)
+            except Exception:
+                pass
+
+        # Get the most recent memories (up to 3)
+        recent_memories = sorted(recent_memories, key=lambda m: m.timestamp, reverse=True)[:3]
+
+        if recent_memories:
+            memory_context = "\n\n## Previous Conversation Context:\n"
+            for i, mem in enumerate(recent_memories, 1):
+                memory_context += f"{i}. User asked: {mem.question}\n   Assistant answered: {mem.answer[:200]}{'...' if len(mem.answer) > 200 else ''}\n"
+            memory_context += "\nIf the current question relates to previous conversations (e.g., 'add 1 more', 'continue', 'what about next', etc.), please refer to the above context to understand the user's intent.\n"
+
+    # Append memory context to system prompt if available
+    if memory_context:
+        system_prompt = system_prompt.rstrip() + memory_context
+
     # Initialize conversation history
     messages = [
         {"role": "system", "content": system_prompt},
@@ -267,7 +293,7 @@ def react_agent(
                 full_response.append("I've reached the maximum number of iterations. Please refine your question or try again.")
 
     response = full_response if full_response else ["No response generated"]
-    
+
     # Save to memory if memory manager is available
     if memory_manager:
         try:
