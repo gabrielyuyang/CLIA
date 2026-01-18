@@ -59,7 +59,7 @@ class MemoryManager:
     def __init__(
         self,
         memory_path: Path,
-        max_memories: int = 10,
+        max_memories: int = 100,
         enable_summarization: bool = True,
         summary_threshold: int = 50,
         api_key: str = None,

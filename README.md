@@ -23,6 +23,7 @@ CLIA is a powerful command-line AI agent that implements multiple agent architec
 
 ### Advanced Features
 
+- **Memory Management**: Short-term conversation memory enables context-aware responses across multiple interactions
 - **Reflection Mode**: Self-critique agent performance and identify improvements
 - **Tool Integration**: Built-in tools for file reading, HTTP requests, and text operations
 - **Conversation History**: Optional history saving in JSONL format
@@ -189,6 +190,16 @@ clia generate "Write a web scraper for news articles"
 - `--agent {plan-build,react,llm-compiler}` - Choose agent architecture (default: plan-build)
 - `--max-iterations <int>` - Maximum iterations for ReAct agent (default: 10)
 
+#### Memory Management
+
+- `--enable-memory` - Enable memory management (uses default memory path)
+- `--memory-path <path>` - Path to memory storage file (enables memory management)
+- `--memory-limit <int>` - Maximum number of memories before summarization (default: 100)
+- `--memory-context-limit <int>` - Maximum number of relevant memories to include in context (default: 3)
+- `--no-memory-summarization` - Disable automatic memory summarization
+
+**Note**: Memory management enables short-term conversation context. Recent conversations (within the last hour) are automatically retrieved and included in the prompt to provide context-aware responses.
+
 #### Advanced Features
 
 - `--with-calibration` - Enable calibration mode for testing and validation (planned feature, not yet fully implemented)
@@ -258,7 +269,23 @@ clia ask "Explain machine learning concepts" --history conversations.jsonl
 clia ask "Complex task requiring multiple steps" --agent react --with-reflection
 ```
 
-#### Example 10: Spec-Driven Development
+#### Example 10: Memory Management - Enable Short-Term Context
+
+```bash
+# Enable memory management with default path
+clia ask "What is the difference between list and tuple?" --enable-memory
+
+# Follow-up question that uses previous context
+clia ask "Give me an example of each" --enable-memory
+
+# Use custom memory path
+clia ask "Your question" --memory-path ./my_memories.jsonl
+
+# Adjust memory settings
+clia ask "Your question" --enable-memory --memory-limit 50 --memory-context-limit 5
+```
+
+#### Example 11: Spec-Driven Development
 
 ```bash
 clia draft --file requirements.txt --with-calibration
@@ -434,6 +461,27 @@ Enable calibration to test and validate code during generation (planned feature,
 clia generate "Create a sorting algorithm" --with-calibration
 ```
 
+### Memory Management
+
+Enable memory management to provide context-aware responses based on recent conversations:
+
+```bash
+# Enable memory with default settings
+clia ask "What is Python?" --enable-memory
+
+# Follow-up question uses previous context
+clia ask "Give me an example" --enable-memory
+
+# Custom memory path and settings
+clia ask "Your question" --memory-path ./memories.jsonl --memory-limit 50
+```
+
+**How it works:**
+- Memory manager stores recent conversations (question-answer pairs)
+- When enabled, agents automatically retrieve the 3 most recent conversations from the last hour
+- This context is included in the system prompt to enable follow-up questions and contextual understanding
+- Works with all agent types: Plan-Build, ReAct, and LLMCompiler
+
 ### Reflection Mode
 
 Enable reflection to get self-critique after task completion:
@@ -452,6 +500,7 @@ clia/
 │   │   ├── history.py              # Conversation history management
 │   │   ├── llm.py                  # LLM API interface
 │   │   ├── llm_compiler_agent.py   # LLMCompiler agent implementation
+│   │   ├── memory.py               # Memory management for short-term context
 │   │   ├── plan_build_agent.py     # Plan-build orchestration
 │   │   ├── prompts.py              # Task-specific prompts
 │   │   ├── react_agent.py          # ReAct agent implementation
@@ -459,6 +508,7 @@ clia/
 │   │   ├── tool_router.py          # Tool routing and execution
 │   │   └── tools.py                # Available tools (read_file, echo, http_get)
 │   ├── histories/                  # Conversation history storage (JSONL files)
+│   ├── memories/                   # Memory storage for short-term context (JSONL files)
 │   ├── tests/                      # Test files
 │   ├── config.py                   # Configuration management
 │   ├── main.py                     # CLI entry point
@@ -501,6 +551,21 @@ from clia.config import Settings
 settings = Settings.load_openai()
 
 # Using react_agent (returns List[str] for streaming compatibility)
+# With memory management for context-aware responses
+from clia.agents import MemoryManager
+from pathlib import Path
+
+memory_manager = MemoryManager(
+    memory_path=Path("clia/memories/memory.jsonl"),
+    max_memories=100,
+    enable_summarization=True,
+    api_key=settings.api_key,
+    base_url=settings.base_url,
+    model=settings.model,
+    max_retries=settings.max_retries,
+    timeout=settings.timeout_seconds
+)
+
 response_list = react_agent(
     question="What is in file.txt?",
     command="ask",
@@ -514,7 +579,8 @@ response_list = react_agent(
     frequency_penalty=settings.frequency_penalty,
     max_tokens=settings.max_tokens,
     timeout=settings.timeout_seconds,
-    verbose=True
+    verbose=True,
+    memory_manager=memory_manager  # Enable short-term memory
 )
 # response_list is a list of strings, join them for full response
 response = "".join(response_list)

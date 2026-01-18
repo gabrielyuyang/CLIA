@@ -5,9 +5,10 @@ This directory contains example scripts demonstrating how to use CLIA agents pro
 ## Available Examples
 
 ### 1. `react_example.py`
-Demonstrates the ReAct agent usage with two approaches:
+Demonstrates the ReAct agent usage with three approaches:
 - Using `react_agent_simple()` for a simple string response
 - Using `react_agent()` with metadata for reflection support
+- Using `react_agent()` with memory management for context-aware responses
 
 **Run:**
 ```bash
@@ -28,6 +29,7 @@ python examples/plan_build_example.py
 Demonstrates the LLMCompiler agent with parallel execution capabilities:
 - Using `llm_compiler_agent_simple()` for a simple string response
 - Using `llm_compiler_agent()` with metadata to see execution details
+- Using `llm_compiler_agent()` with memory management for context-aware responses
 
 **Run:**
 ```bash
@@ -80,6 +82,7 @@ Before running any example, make sure you have:
 - Examples demonstrate both simple and advanced usage patterns
 - The reflection example shows how to get performance analysis from agents
 - The comprehensive example helps you choose the right agent for your task
+- Memory management examples show how to enable context-aware responses for follow-up questions
 
 ## Customization
 
@@ -89,6 +92,7 @@ You can modify these examples to:
 - Use different commands (ask, draft, explain, debug, fix, generate)
 - Enable verbose mode for debugging
 - Use different models or API endpoints
+- Enable memory management for context-aware conversations
 
 ## See Also
 
