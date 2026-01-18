@@ -155,33 +155,33 @@ def parse_args() -> argparse.ArgumentParser:
             default=10,
             help="Maximum iterations for ReAct agent (default: 10)"
         )
-        
+
         # Memory management options
         command_parser.add_argument(
             "--memory-path",
             type=Path,
             help="Path to memory storage file (enables memory management)"
         )
-        
+
         command_parser.add_argument(
             "--enable-memory",
             action="store_true",
             help="Enable memory management (uses default memory path)"
         )
-        
+
         command_parser.add_argument(
             "--memory-limit",
             type=int,
             default=100,
             help="Maximum number of memories before summarization (default: 100)"
         )
-        
+
         command_parser.add_argument(
             "--no-memory-summarization",
             action="store_true",
             help="Disable automatic memory summarization"
         )
-        
+
         command_parser.add_argument(
             "--memory-context-limit",
             type=int,
@@ -225,7 +225,7 @@ def main():
         temperature = args.temperature or settings.temperature
         top_p = args.top_p or settings.top_p
         max_retries = args.max_retries or settings.max_retries
-        
+
         # Initialize memory manager if enabled
         memory_manager = None
         if args.enable_memory or args.memory_path:
