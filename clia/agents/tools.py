@@ -1,5 +1,8 @@
 from pathlib import Path
+from typing import Optional
 import httpx
+import subprocess
+import shutil
 
 
 def read_file_safe(path_str: str, max_chars: int = 4000) -> str:
@@ -37,3 +40,44 @@ def http_get(url: str, timeout: float = 10.0) -> str:
         return f"[HTTP GET connection error: {e}]"
     except Exception as e:
         return f"[HTTP GET error: {e}]"
+
+
+def write_file_safe(path_str: str, content: str, backup: bool = True) -> str:
+    "Write content to file with optional backup"
+    try:
+        path = Path(path_str).expanduser().resolve()
+
+        # Create backup if file exists and backup is enabled
+        if backup and path.exists():
+            backup_path = path.with_suffix(path.suffix + '.bak')
+            shutil.copy2(path, backup_path)
+
+        # Create parent directories if needed
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write content
+        with path.open('w', encoding='utf-8') as f:
+            f.write(content)
+
+        return f"[File written successfully to {path_str}]"
+    except Exception as e:
+        return f"[Error writing file {path_str}: {e}]"
+
+
+def shell_exec(command: str, timeout: float = 30.0, cwd: Optional[str] = None) -> str:
+    "Execute shell command with timeout"
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd
+        )
+        output = result.stdout + result.stderr
+        return output if output else "[Command executed successfully with no output]"
+    except subprocess.TimeoutExpired:
+        return f"[Command timeout after {timeout}s]"
+    except Exception as e:
+        return f"[Shell execution error: {e}]"
