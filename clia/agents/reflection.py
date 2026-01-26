@@ -468,6 +468,72 @@ def reflect_plan_build_agent(
     )
 
 
+def reflect_rewoo_agent(
+    question: str,
+    plan: List[Dict],
+    execution_results: Dict[str, str],
+    final_answer: str,
+    api_key: str = None,
+    base_url: str = None,
+    max_retries: int = 5,
+    model: str = None,
+    temperature: float = 0.3,
+    top_p: float = 0.85,
+    frequency_penalty: float = 0.0,
+    max_tokens: int = 2048,
+    timeout: float = 30.0,
+    verbose: bool = False
+) -> AgentReflection:
+    """
+    Generate reflection specifically for ReWOO agent execution.
+
+    Args:
+        question: The original user question
+        plan: The plan generated with variable placeholders
+        execution_results: Results from executing each step
+        final_answer: The final answer provided
+        ... (other LLM parameters)
+
+    Returns:
+        AgentReflection object
+    """
+    tools_used = []
+    errors_encountered = []
+
+    for step in plan:
+        if "tool" in step:
+            tools_used.append(step["tool"])
+        if step.get("id") in execution_results:
+            result = execution_results[step["id"]]
+            if "Error" in result:
+                errors_encountered.append(result)
+
+    execution_summary = {
+        "plan_length": len(plan),
+        "tools_executed": len(execution_results),
+        "tools_used": list(set(tools_used)),
+        "errors_encountered": errors_encountered,
+        "parallel_execution": True
+    }
+
+    return reflect_on_execution(
+        question=question,
+        agent_type="rewoo",
+        execution_summary=execution_summary,
+        final_answer=final_answer,
+        api_key=api_key,
+        base_url=base_url,
+        max_retries=max_retries,
+        model=model,
+        temperature=temperature,
+        top_p=top_p,
+        frequency_penalty=frequency_penalty,
+        max_tokens=max_tokens,
+        timeout=timeout,
+        verbose=verbose
+    )
+
+
 def _calculate_max_depth(plan: List[Dict]) -> int:
     """Calculate maximum dependency depth in a plan."""
     if not plan:

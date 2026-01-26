@@ -8,10 +8,12 @@ from .agents.memory import MemoryManager
 from .agents.plan_build_agent import plan_build
 from .agents.react_agent import react_agent
 from .agents.llm_compiler_agent import llm_compiler_agent
+from .agents.rewoo_agent import rewoo_agent
 from .agents.reflection import (
     reflect_react_agent,
     reflect_llm_compiler_agent,
-    reflect_plan_build_agent
+    reflect_plan_build_agent,
+    reflect_rewoo_agent
 )
 from .config import Settings
 from .utils import get_multiline_input
@@ -144,9 +146,9 @@ def parse_args() -> argparse.ArgumentParser:
         # Agent模式选择
         command_parser.add_argument(
             "--agent",
-            choices=["plan-build", "react", "llm-compiler"],
+            choices=["plan-build", "react", "llm-compiler", "rewoo"],
             default="plan-build",
-            help="Agent architecture to use: 'plan-build' (default), 'react' (ReAct pattern), or 'llm-compiler' (parallel execution)"
+            help="Agent architecture to use: 'plan-build' (default), 'react' (ReAct pattern), 'llm-compiler' (parallel execution), or 'rewoo' (ReWOO pattern)"
         )
 
         command_parser.add_argument(
@@ -248,7 +250,33 @@ def main():
 
         # 选择agent架构
         execution_metadata = None
-        if args.agent == "react":
+        if args.agent == "rewoo":
+            logger.info("Using ReWOO agent architecture")
+            result = rewoo_agent(
+                question=question,
+                command=args.command,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds,
+                verbose=args.verbose,
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
+            )
+            if args.with_reflection:
+                full_response, execution_metadata = result
+                full_response = [full_response]
+            else:
+                full_response = result
+                if isinstance(full_response, str):
+                    full_response = [full_response]
+        elif args.agent == "react":
             logger.info("Using ReAct agent architecture")
             result = react_agent(
                 question=question,
@@ -372,6 +400,23 @@ def main():
                         execution_results=execution_metadata.get("execution_results", {}),
                         final_answer=final_answer_str,
                         plan_valid=True,  # Assume valid if we got here
+                        api_key=settings.api_key,
+                        base_url=settings.base_url,
+                        max_retries=max_retries,
+                        model=model,
+                        temperature=temperature,
+                        top_p=top_p,
+                        frequency_penalty=settings.frequency_penalty,
+                        max_tokens=settings.max_tokens,
+                        timeout=settings.timeout_seconds,
+                        verbose=args.verbose
+                    )
+                elif args.agent == "rewoo":
+                    reflection = reflect_rewoo_agent(
+                        question=question,
+                        plan=execution_metadata.get("plan", []),
+                        execution_results=execution_metadata.get("execution_results", {}),
+                        final_answer=final_answer_str,
                         api_key=settings.api_key,
                         base_url=settings.base_url,
                         max_retries=max_retries,
