@@ -533,30 +533,83 @@ def reflect_rewoo_agent(
         verbose=verbose
     )
 
+def reflect_tot_agent(
+    question: str,
+    all_thoughts: List[Dict],
+    final_thoughts: List[Dict],
+    final_answer: str,
+    thoughts_explored: int,
+    final_paths: int,
+    max_depth: int,
+    branching_factor: int,
+    beam_width: int,
+    best_score: float,
+    api_key: str = None,
+    base_url: str = None,
+    max_retries: int = 5,
+    model: str = None,
+    temperature: float = 0.3,
+    top_p: float = 0.85,
+    frequency_penalty: float = 0.0,
+    max_tokens: int = 2048,
+    timeout: float = 30.0,
+    verbose: bool = False
+) -> AgentReflection:
+    """
+    Generate reflection specifically for Tree-of-Thoughts agent execution.
 
-def _calculate_max_depth(plan: List[Dict]) -> int:
-    """Calculate maximum dependency depth in a plan."""
-    if not plan:
-        return 0
+    Args:
+        question: The original user question
+        all_thoughts: All thoughts explored during tree search
+        final_thoughts: Thoughts at maximum depth
+        final_answer: The final answer provided
+        thoughts_explored: Total number of thoughts explored
+        final_paths: Number of paths at final depth
+        max_depth: Maximum depth explored
+        branching_factor: Branching factor used
+        beam_width: Beam width used
+        best_score: Highest thought score
+        ... (other LLM parameters)
 
-    step_map = {step.get("id"): step for step in plan if "id" in step}
+    Returns:
+        AgentReflection object
+    """
+    # Analyze execution
+    tools_suggested = []
+    tools_executed = 0
 
-    def get_depth(step_id: str, visited: set = None) -> int:
-        if visited is None:
-            visited = set()
-        if step_id in visited:
-            return 0  # Cycle detected
-        if step_id not in step_map:
-            return 0
+    for thought_dict in all_thoughts:
+        # Reconstruct Thought object from dict
+        if "action" in thought_dict and thought_dict["action"]:
+            tools_suggested.append(thought_dict["action"])
+        if "result" in thought_dict and thought_dict["result"]:
+            tools_executed += 1
 
-        visited.add(step_id)
-        step = step_map[step_id]
-        deps = step.get("dependencies", [])
+    execution_summary = {
+        "max_depth": max_depth,
+        "branching_factor": branching_factor,
+        "beam_width": beam_width,
+        "thoughts_explored": thoughts_explored,
+        "final_paths": final_paths,
+        "tools_suggested": list(set(tools_suggested)),
+        "tools_executed": tools_executed,
+        "best_score": best_score,
+        "exploration_efficiency": thoughts_explored / (max_depth * branching_factor) if max_depth * branching_factor > 0 else 0
+    }
 
-        if not deps:
-            return 1
-
-        max_dep_depth = max([get_depth(dep, visited.copy()) for dep in deps], default=0)
-        return max_dep_depth + 1
-
-    return max([get_depth(step_id) for step_id in step_map.keys()], default=0)
+    return reflect_on_execution(
+        question=question,
+        agent_type="tree-of-thoughts",
+        execution_summary=execution_summary,
+        final_answer=final_answer,
+        api_key=api_key,
+        base_url=base_url,
+        max_retries=max_retries,
+        model=model,
+        temperature=temperature,
+        top_p=top_p,
+        frequency_penalty=frequency_penalty,
+        max_tokens=max_tokens,
+        timeout=timeout,
+        verbose=verbose
+    )

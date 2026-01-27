@@ -1,6 +1,6 @@
 # CLIA: An Efficient Minimalist CLI AI Agent
 
-CLIA is a powerful command-line AI agent that implements multiple agent architectures (Plan-Build, ReAct, and LLMCompiler) to help developers with various coding tasks. It leverages OpenAI-compatible APIs to provide intelligent assistance with a focus on simplicity, efficiency, and flexibility.
+CLIA is a powerful command-line AI agent that implements multiple agent architectures (Plan-Build, ReAct, LLMCompiler, and Tree-of-Thoughts) to help developers with various coding tasks. It leverages OpenAI-compatible APIs to provide intelligent assistance with a focus on simplicity, efficiency, and flexibility.
 
 ## Features
 
@@ -9,6 +9,7 @@ CLIA is a powerful command-line AI agent that implements multiple agent architec
 - **Plan-Build Agent** (Default): Plans all steps upfront, then executes them sequentially. Best for predictable, well-defined tasks.
 - **ReAct Agent**: Iterative reasoning-action-observation pattern. Adapts dynamically to results. Best for complex, exploratory tasks.
 - **LLMCompiler Agent**: Compiles tasks into a Directed Acyclic Graph (DAG) and executes independent steps in parallel. Best for tasks with parallelizable operations.
+- **Tree-of-Thoughts Agent**: Explores multiple reasoning paths in parallel, evaluates them, and selects the best approach. Best for complex analysis, debugging, and multi-step problem-solving tasks.
 
 #### Notes: ReAct and LLMCompiler agents are experimental and may be deprecated in future versions.
 
@@ -214,6 +215,15 @@ clia generate "Write a web scraper for news articles"
 clia ask "What is the difference between list and tuple in Python?"
 ```
 
+#### `tot` - Tree-of-Thoughts Agent
+
+Explore multiple reasoning paths for complex analysis and debugging tasks.
+
+```bash
+clia ask "Analyze why this code is producing inconsistent results" --agent tot --verbose
+clia debug "My neural network training is unstable, suggest multiple hypotheses" --agent tot
+```
+
 #### Example 2: Using ReAct Agent
 
 ```bash
@@ -226,17 +236,11 @@ clia ask "Read file.txt and summarize its contents" --agent react --verbose
 clia ask "Read file1.txt and file2.txt, then compare them" --agent llm-compiler
 ```
 
-#### Example 4: Multiline Input
+#### Example 4: Using Tree-of-Thoughts Agent for Complex Analysis
 
 ```bash
-clia draft --multiline
-Enter your specification (type EOF to finish):
-Create a class for managing a bank account with:
-- deposit() method
-- withdraw() method
-- balance property
-- transaction history
-EOF
+clia debug "My Python script gives different results on different runs. Analyze potential causes." --agent tot --verbose
+clia ask "Compare multiple approaches to optimize this algorithm" --agent tot --max-depth 4 --branching-factor 3
 ```
 
 #### Example 5: File-Based Code Explanation
@@ -325,38 +329,26 @@ Observation: [tool result]
 Final Answer: [final response]
 ```
 
-#### LLMCompiler Agent
+#### Tree-of-Thoughts Agent
 
-The LLMCompiler agent compiles tasks into a DAG:
+The Tree-of-Thoughts (ToT) agent explores multiple reasoning paths in parallel, evaluates them, and selects the best approach to solve complex tasks.
 
-1. **Planning Phase**: Generates a Directed Acyclic Graph of tool calls with dependencies
-2. **Execution Phase**: Executes independent steps in parallel, respecting dependencies
-3. **Synthesis Phase**: Combines results into final answer
+1. **Multi-Path Exploration**: Generates k candidate thoughts per step to explore diverse approaches
+2. **Inline Evaluation**: Scores each thought before proceeding to ensure quality
+3. **Beam Search**: Prunes less promising branches to balance exploration with computational cost
+4. **Tool Integration**: Executes tools suggested by thoughts and incorporates results
+5. **Synthesis**: Aggregates insights from multiple paths for comprehensive answers
 
-**Best for**: Tasks with parallelizable operations (e.g., reading multiple files)
+**Best for**: Complex analysis, debugging, and multi-step problem-solving tasks
 
 **Format**:
-```json
-[
-    {
-        "id": "step1",
-        "tool": "read_file",
-        "args": {"path_str": "file1.txt"},
-        "dependencies": []
-    },
-    {
-        "id": "step2",
-        "tool": "read_file",
-        "args": {"path_str": "file2.txt"},
-        "dependencies": []
-    },
-    {
-        "id": "final",
-        "action": "final",
-        "answer": "...",
-        "dependencies": ["step1", "step2"]
-    }
-]
+```
+Thought 1: [approach A]
+Thought 2: [approach B]
+Thought 3: [approach C]
+...
+[Evaluation and selection of best path]
+Final Answer: [comprehensive response]
 ```
 
 ### Available Tools
@@ -384,6 +376,7 @@ Reflection is agent-specific and analyzes:
 - **ReAct**: Iterations used, tools used, conversation flow
 - **LLMCompiler**: Plan validity, parallel execution opportunities, dependency depth
 - **Plan-Build**: Plan length, steps executed, tool usage
+- **Tree-of-Thoughts**: Exploration depth, branching factor, beam width, thoughts evaluated
 
 ### Workflow Diagram
 
@@ -397,29 +390,29 @@ Reflection is agent-specific and analyzes:
 │  Agent Selection│
 │  (plan-build/   │
 │   react/llm-    │
-│   compiler)     │
+│   compiler/tot) │
 └──────┬──────────┘
        │
-       ├─────────────────┬──────────────────┐
-       ▼                 ▼                  ▼
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐
-│ Plan-Build  │  │    ReAct    │  │ LLMCompiler  │
-│   Agent     │  │    Agent    │  │    Agent     │
-└──────┬──────┘  └──────┬───────┘  └──────┬───────┘
-       │                │                  │
-       ▼                ▼                  ▼
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐
-│   Plan      │  │   Thought    │  │  DAG Plan    │
-│   Steps     │  │   Action     │  │  Generation  │
-└──────┬──────┘  └──────┬───────┘  └──────┬───────┘
-       │                │                  │
-       ▼                ▼                  ▼
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Execute    │  │  Execute     │  │  Parallel    │
-│  Sequentially│  │  Iteratively │  │  Execution   │
-└──────┬──────┘  └──────┬───────┘  └──────┬───────┘
-       │                │                  │
-       └────────────────┴──────────────────┘
+       ├─────────────────┬──────────────────┬────────────────────┐
+       ▼                 ▼                  ▼                    ▼
+┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│ Plan-Build  │  │    ReAct    │  │ LLMCompiler  │  │ Tree-of-Thoughts │
+│   Agent     │  │    Agent    │  │    Agent     │  │      Agent       │
+└──────┬──────┘  └──────┬───────┘  └──────┬───────┘  └─────────┬────────┘
+       │                │                  │                    │
+       ▼                ▼                  ▼                    ▼
+┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│   Plan      │  │   Thought    │  │  DAG Plan    │  │  Multi-Path      │
+│   Steps     │  │   Action     │  │  Generation  │  │  Exploration     │
+└──────┬──────┘  └──────┬───────┘  └──────┬───────┘  └─────────┬────────┘
+       │                │                  │                    │
+       ▼                ▼                  ▼                    ▼
+┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│  Execute    │  │  Execute     │  │  Parallel    │  │  Beam Search     │
+│  Sequentially│  │  Iteratively │  │  Execution   │  │  Evaluation      │
+└──────┬──────┘  └──────┬───────┘  └──────┬───────┘  └─────────┬────────┘
+       │                │                  │                    │
+       └────────────────┴──────────────────┴────────────────────┘
                         │
                         ▼
               ┌─────────────────┐
@@ -480,7 +473,7 @@ clia ask "Your question" --memory-path ./memories.jsonl --memory-limit 50
 - Memory manager stores recent conversations (question-answer pairs)
 - When enabled, agents automatically retrieve the 3 most recent conversations from the last hour
 - This context is included in the system prompt to enable follow-up questions and contextual understanding
-- Works with all agent types: Plan-Build, ReAct, and LLMCompiler
+- Works with all agent types: Plan-Build, ReAct, LLMCompiler, and Tree-of-Thoughts
 
 ### Reflection Mode
 
@@ -506,6 +499,7 @@ clia/
 │   │   ├── react_agent.py          # ReAct agent implementation
 │   │   ├── reflection.py           # Reflection and self-critique
 │   │   ├── tool_router.py          # Tool routing and execution
+│   │   ├── tot_agent.py            # Tree-of-Thoughts agent implementation
 │   │   └── tools.py                # Available tools (read_file, echo, http_get)
 │   ├── histories/                  # Conversation history storage (JSONL files)
 │   ├── memories/                   # Memory storage for short-term context (JSONL files)
@@ -528,6 +522,7 @@ Detailed documentation for each agent architecture is available:
 - **[Plan-Build Agent](PLAN_BUILD_AGENT.md)**: Two-phase planning and execution approach
 - **[ReAct Agent](REACT_AGENT.md)**: Iterative reasoning-action-observation pattern
 - **[LLMCompiler Agent](LLM_COMPILER_AGENT.md)**: DAG-based parallel execution
+- **[Tree-of-Thoughts Agent](TREE_OF_THOUGHTS_AGENT.md)**: Multi-path exploration and beam search
 - **[Reflection System](REFLECTION_AGENT.md)**: Self-critique and performance analysis
 
 ## Development
@@ -658,15 +653,15 @@ The `read_file` tool has a default 4000 character limit. Adjust in your code if 
 
 ## Comparison of Agent Architectures
 
-| Feature | Plan-Build | ReAct | LLMCompiler |
-|---------|-----------|-------|-------------|
-| Planning | Upfront, all steps | Iterative, step-by-step | DAG with dependencies |
-| Execution | Sequential | Iterative | Parallel where possible |
-| Adaptability | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) |
-| Complexity | Simple | Moderate | Complex |
-| Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks |
-| Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) |
-| Return Metadata | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
+| Feature | Plan-Build | ReAct | LLMCompiler | Tree-of-Thoughts |
+|---------|-----------|-------|-------------|------------------|
+| Planning | Upfront, all steps | Iterative, step-by-step | DAG with dependencies | Multi-path with beam search |
+| Execution | Sequential | Iterative | Parallel where possible | Beam search evaluation |
+| Adaptability | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) | High (evaluates multiple paths) |
+| Complexity | Simple | Moderate | Complex | Most Complex |
+| Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks | Complex analysis/debugging |
+| Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) | Configurable (default: 3 depth) |
+| Return Metadata | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
 
 ## License
 
