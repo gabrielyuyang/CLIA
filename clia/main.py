@@ -9,11 +9,13 @@ from .agents.plan_build_agent import plan_build
 from .agents.react_agent import react_agent
 from .agents.llm_compiler_agent import llm_compiler_agent
 from .agents.rewoo_agent import rewoo_agent
+from .agents.tot_agent import tot_agent
 from .agents.reflection import (
     reflect_react_agent,
     reflect_llm_compiler_agent,
     reflect_plan_build_agent,
-    reflect_rewoo_agent
+    reflect_rewoo_agent,
+    reflect_tot_agent
 )
 from .config import Settings
 from .utils import get_multiline_input
@@ -146,9 +148,9 @@ def parse_args() -> argparse.ArgumentParser:
         # Agent模式选择
         command_parser.add_argument(
             "--agent",
-            choices=["plan-build", "react", "llm-compiler", "rewoo"],
+            choices=["plan-build", "react", "llm-compiler", "rewoo", "tot"],
             default="plan-build",
-            help="Agent architecture to use: 'plan-build' (default), 'react' (ReAct pattern), 'llm-compiler' (parallel execution), or 'rewoo' (ReWOO pattern)"
+            help="Agent architecture to use: 'plan-build' (default), 'react' (ReAct pattern), 'llm-compiler' (parallel execution), 'rewoo' (ReWOO pattern), or 'tot' (Tree-of-Thoughts)"
         )
 
         command_parser.add_argument(
@@ -156,6 +158,28 @@ def parse_args() -> argparse.ArgumentParser:
             type=int,
             default=10,
             help="Maximum iterations for ReAct agent (default: 10)"
+        )
+
+        # Tree-of-Thoughts specific arguments
+        command_parser.add_argument(
+            "--max-depth",
+            type=int,
+            default=3,
+            help="Maximum depth for Tree-of-Thoughts agent (default: 3)"
+        )
+
+        command_parser.add_argument(
+            "--branching-factor",
+            type=int,
+            default=3,
+            help="Branching factor for Tree-of-Thoughts agent (default: 3)"
+        )
+
+        command_parser.add_argument(
+            "--beam-width",
+            type=int,
+            default=2,
+            help="Beam width for Tree-of-Thoughts agent (default: 2)"
         )
 
         # Memory management options
@@ -327,6 +351,35 @@ def main():
                 # LLMCompiler returns a string, wrap it in a list for consistency
                 if isinstance(full_response, str):
                     full_response = [full_response]
+        elif args.agent == "tot":
+            logger.info("Using Tree-of-Thoughts agent architecture")
+            result = tot_agent(
+                question=question,
+                command=args.command,
+                max_depth=args.max_depth,
+                branching_factor=args.branching_factor,
+                beam_width=args.beam_width,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds,
+                verbose=args.verbose,
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
+            )
+            if args.with_reflection:
+                full_response, execution_metadata = result
+                full_response = [full_response]
+            else:
+                full_response = result
+                if isinstance(full_response, str):
+                    full_response = [full_response]
         else:
             logger.info("Using Plan-Build agent architecture")
             # TO-DO: 添加支持with_calibration参数
@@ -417,6 +470,29 @@ def main():
                         plan=execution_metadata.get("plan", []),
                         execution_results=execution_metadata.get("execution_results", {}),
                         final_answer=final_answer_str,
+                        api_key=settings.api_key,
+                        base_url=settings.base_url,
+                        max_retries=max_retries,
+                        model=model,
+                        temperature=temperature,
+                        top_p=top_p,
+                        frequency_penalty=settings.frequency_penalty,
+                        max_tokens=settings.max_tokens,
+                        timeout=settings.timeout_seconds,
+                        verbose=args.verbose
+                    )
+                elif args.agent == "tot":
+                    reflection = reflect_tot_agent(
+                        question=question,
+                        all_thoughts=execution_metadata.get("all_thoughts", []),
+                        final_thoughts=execution_metadata.get("final_thoughts", []),
+                        final_answer=final_answer_str,
+                        thoughts_explored=execution_metadata.get("thoughts_explored", 0),
+                        final_paths=execution_metadata.get("final_paths", 0),
+                        max_depth=args.max_depth,
+                        branching_factor=args.branching_factor,
+                        beam_width=args.beam_width,
+                        best_score=max([t.get("score", 0) for t in execution_metadata.get("final_thoughts", [])], default=0.0),
                         api_key=settings.api_key,
                         base_url=settings.base_url,
                         max_retries=max_retries,

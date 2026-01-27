@@ -56,7 +56,7 @@ def openai_completion(*,
         content = response.choices[0].message.content
         full_response.append(content)
         logger.info("Non-streaming response received")
-        print(content)
+        logger.debug(f"Response: {content}")
     else:
         # 流式输出
         # print("-" * 28 + "\n")
@@ -67,5 +67,6 @@ def openai_completion(*,
                 full_response.append(content)
         # print("\n" + "-" * 28 + "\n")
         logger.info("Streaming response received")
+        logger.debug(f"Response: {''.join(full_response)}")
     # 对于流式响应，直接拼接而不添加额外的换行符，以保持JSON格式完整
     return ''.join(full_response) if stream else '\n'.join(full_response)

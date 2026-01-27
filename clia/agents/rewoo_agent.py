@@ -150,7 +150,10 @@ def _worker(plan: List[Dict]) -> Dict[str, str]:
             logger.error(f"Step {step_id} failed: {e}")
             return (step_id, f"Error: {str(e)}")
 
-    with ThreadPoolExecutor(max_workers=min(len(tool_steps), 10)) as executor:
+    if not tool_steps:
+        return {}
+
+    with ThreadPoolExecutor(max_workers=max(1, min(len(tool_steps), 10))) as executor:
         futures = {executor.submit(execute_step, step): step for step in tool_steps}
         for future in as_completed(futures):
             step_id, result = future.result()
@@ -213,6 +216,27 @@ def rewoo_agent(question: str, command: str, api_key: str = None, base_url: str 
     plan = _planner(question, command, api_key, base_url, max_retries, model,
                     stream, temperature, top_p, frequency_penalty, max_tokens,
                     timeout, memory_manager)
+
+    # If the plan only contains a direct answer (no tools), return it immediately
+    if len(plan) == 1 and plan[0].get("action") == "final" and "answer" in plan[0]:
+        final_answer = plan[0]["answer"]
+        if memory_manager:
+            try:
+                memory_manager.add_memory(
+                    question=question, answer=final_answer, command=command,
+                    agent_type="rewoo",
+                    metadata={"plan_length": 1, "tools_executed": 0, "direct_answer": True}
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save memory: {e}")
+
+        if return_metadata:
+            return final_answer, {
+                "plan": plan,
+                "execution_results": {},
+                "tools_executed": 0
+            }
+        return final_answer
 
     if verbose:
         logger.info(f"Generated plan with {len(plan)} steps")

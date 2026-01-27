@@ -59,7 +59,7 @@ def _planner(question: str,
             memory_context = "\n\n## 之前的对话上下文：\n"
             for i, mem in enumerate(recent_memories, 1):
                 memory_context += f"{i}. 用户问：{mem.question}\n   助手答：{mem.answer[:200]}{'...' if len(mem.answer) > 200 else ''}\n"
-            memory_context += "\n如果当前问题与之前的对话相关（例如'再加1'、'继续'、'然后呢'等），请参考上述上下文来理解用户的意图。\n"
+            memory_context += "\n如果当前问题与之前的对话相关 (例如'再加1'、'继续'、'然后呢'等），请参考上述上下文来理解用户的意图。\n"
     
     PLAN_PROMPT = f"""
 你是一个规划-执行助手，必须按以下规则生成步骤计划：
@@ -74,16 +74,14 @@ def _planner(question: str,
 3. 强制规则：
    - 必须以 {{"action": "final"}} 结尾，无论是否使用了工具
    - 如果无需工具，直接返回 [{{"action": "final", "answer": "..."}}]
-   - 如果需要工具，格式为：[工具步骤1, ...,{{"action": "final", "answer": "..."}}]
+   - 如果需要工具，格式为：[工具步骤1,工具步骤2, ...,最终步骤]
    - "answer" 字段中禁止出现任何工具名称或工具调用语法
    - 工具参数必须严格符合工具规范要求
 {memory_context}
 4. 示例：
-   直接回答示例：
-   [{{"action": "final", "answer": "这是一个编程助手"}}]
-   需要工具示例：
    [
-     {{"action": "tool", "tool": "read_file", "args": {{"path_str": "test.txt", "max_chars": 1000}}, "note": "读取文件内容"}},       
+     {{"action": "tool", "tool": "read_file", "args": {{"path_str": "test.txt", "max_chars": 1000}}, "note": "读取文件内容"}},
+     {{"action": "tool", "tool": "http_get", "args": {{"url": "https://www.baidu.com", "timeout": 10.0}}, "note": "获取百度首页内容"}},
      {{"action": "final", "answer": "文件内容显示..."}}
    ]
 
@@ -98,7 +96,7 @@ def _planner(question: str,
         {"role": "system", "content": PLAN_PROMPT},
         {"role": "user", "content": question}
     ]
-    logger.debug(f"\nPlanning with messages: {messages}")
+    # logger.debug(f"\nPlanning with messages: {messages}")
 
     # 调用LLM API
     response = llm.openai_completion(

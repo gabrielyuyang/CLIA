@@ -9,7 +9,7 @@ from typing import Callable, Dict
 class Tool:
     name: str
     desc: str
-    schema: Dict[str, str]
+    args: Dict[str, str]
     handler: Callable[..., str]
 
 
@@ -17,16 +17,16 @@ TOOLS = {
     "read_file": Tool(
         name="read_file",
         desc="Read a local file with size limit",
-        schema={
+        args={
             "path_str": "path of the file to read",
-            "max_chars": "maximum number of characters to read"
+            "max_chars": "maximum number of characters to read (default: 4000)"
         },
         handler=lambda path_str, max_chars: tools.read_file_safe(path_str, max_chars)
     ),
     "write_file": Tool(
         name="write_file",
         desc="Write content to a file (creates or overwrites) with optional backup",
-        schema={
+        args={
             "path_str": "path of the file to write",
             "content": "content to write to the file",
             "backup": "whether to backup existing file (default: True)"
@@ -36,7 +36,7 @@ TOOLS = {
     "shell": Tool(
         name="shell",
         desc="Execute shell command with timeout",
-        schema={
+        args={
             "command": "shell command to execute",
             "timeout": "timeout in seconds (default: 30.0)",
             "cwd": "working directory for command execution"
@@ -46,7 +46,7 @@ TOOLS = {
     "echo": Tool(
         name="echo",
         desc="Echo the input text",
-        schema={
+        args={
             "text": "the text to echo"
         },
         handler=lambda text: tools.echo_safe(text)
@@ -54,16 +54,16 @@ TOOLS = {
     "http_get": Tool(
         name="http_get",
         desc="Send a HTTP GET request with timeout and basic error handling",
-        schema={
+        args={
             "url": "the URL to send the GET request to",
-            "timeout": "the timeout for the request in seconds"
+            "timeout": "the timeout for the request in seconds (default: 10.0)"
         },
         handler=lambda url, timeout: tools.http_get(url, timeout)
     ),
     "fix_code": Tool(
         name="fix_code",
         desc="Fix code errors with optional test execution and iteration. Handles syntax errors, runtime errors, test failures, and logical errors. Returns diff and optionally writes back to file.",
-        schema={
+        args={
             "error_input": "error message, stack trace, or test output",
             "code_context": "code string or file path to fix",
             "max_iterations": "maximum fix iterations (default: 3)",
@@ -91,13 +91,13 @@ def list_tools():
 def run_tool(tool_name: str, **kwargs):
     if tool_name not in TOOLS:
         raise ValueError(f"Unknown tool: {tool_name}")
-    if not any(k in TOOLS[tool_name].schema for k in kwargs):
-        raise ValueError(f"Unknown arguments for tool {tool_name}: {TOOLS[tool_name].schema}")
+    if not any(k in TOOLS[tool_name].args for k in kwargs):
+        raise ValueError(f"Unknown arguments for tool {tool_name}: {TOOLS[tool_name].args}")
     return TOOLS[tool_name].handler(**kwargs)
 
 
 def tools_specs():
     lines = []
     for tool in TOOLS.values():
-        lines.append(f' - {tool.name}: {tool.desc} | args: {json.dumps(tool.schema, ensure_ascii=False)}')
+        lines.append(f' - {tool.name}: {tool.desc} | args: {json.dumps(tool.args, ensure_ascii=False)}')
     return '\n'.join(lines)
