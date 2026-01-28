@@ -193,7 +193,6 @@ Building Phase:
 
 ## Future Enhancements
 
-- [ ] Support for `--with-calibration` parameter for code testing
 - [ ] Better streaming support during execution
 - [ ] Plan validation before execution
 - [ ] Plan optimization (removing redundant steps)

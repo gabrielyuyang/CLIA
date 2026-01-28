@@ -186,7 +186,6 @@ clia generate "Write a web scraper for news articles"
 
 - `--verbose`, `-v` - Enable verbose logging
 - `--history <path>` - Save conversation history to a JSONL file
-- `--no-history` - Disable history saving
 
 #### Agent Selection
 
@@ -208,7 +207,6 @@ clia generate "Write a web scraper for news articles"
 
 #### Advanced Features
 
-- `--with-calibration` - Enable calibration mode for testing and validation (planned feature, not yet fully implemented)
 - `--with-interaction` - Enable interactive mode (planned feature, not yet fully implemented)
 - `--with-reflection` - Enable reflection mode - agent will self-critique its performance
 
@@ -297,7 +295,7 @@ clia ask "Your question" --enable-memory --memory-limit 50 --memory-context-limi
 #### Example 11: Spec-Driven Development
 
 ```bash
-clia draft --file requirements.txt --with-calibration
+clia draft --file requirements.txt
 ```
 
 ## Architecture
@@ -459,14 +457,6 @@ clia ask "Generate JSON data" --output-format json
 
 # Plain text for simple processing
 clia ask "Simple answer" --output-format text
-```
-
-### Calibration Mode
-
-Enable calibration to test and validate code during generation (planned feature, not yet fully implemented):
-
-```bash
-clia generate "Create a sorting algorithm" --with-calibration
 ```
 
 ### Memory Management

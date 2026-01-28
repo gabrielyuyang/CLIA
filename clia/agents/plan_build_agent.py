@@ -183,7 +183,6 @@ def _builder(question: str,
         timeout=timeout
     )
 
-    # TO-DO：支持with_calibration参数
     # TO-DO：支持流式输出
 
     if return_metadata:

@@ -119,21 +119,12 @@ def parse_args() -> argparse.ArgumentParser:
             "--history", help="Path to save conversation history"
         )
 
-        command_parser.add_argument(
-            "--no-history", action="store_true", help="Disable history saving"
-        )
-
         # 输出格式
         command_parser.add_argument(
             "--output-format",
             choices=["markdown", "json", "text"],
             default="markdown",
             help="Output format (default: markdown)",
-        )
-
-        # 校准模式
-        command_parser.add_argument(
-            "--with-calibration", action="store_true", help="Enable calibration mode"
         )
 
         # 输入模式
@@ -229,10 +220,10 @@ def main():
             question = " ".join(args.question)
 
         # 设置日志级别
-        if args.verbose:
+        if args.quiet:
+            logging.disable(logging.CRITICAL)
+        elif args.verbose:
             logging.getLogger().setLevel(logging.DEBUG)
-        elif args.quiet:
-            logging.getLogger().setLevel(logging.WARNING)
 
         # 如果不是quiet模式，显示欢迎信息
         print("-" * 28)
@@ -249,6 +240,8 @@ def main():
         # 应用命令行参数覆盖
         model = args.model or settings.model
         stream = args.stream or settings.stream
+        if args.quiet:
+            stream = False
         temperature = args.temperature or settings.temperature
         top_p = args.top_p or settings.top_p
         max_retries = args.max_retries or settings.max_retries
@@ -406,7 +399,6 @@ def main():
                     full_response = [full_response]
         else:
             logger.info("Using Plan-Build agent architecture")
-            # TO-DO: 添加支持with_calibration参数
             result = plan_build(
                 question=question,
                 command=args.command,
@@ -563,7 +555,7 @@ def main():
                     print(f"\nWarning: Reflection generation failed: {e}\n")
 
         # 保存历史记录
-        if not args.no_history and args.history:
+        if args.history:
             # Handle both string and list responses
             if isinstance(full_response, list):
                 response_content = "".join(full_response)
