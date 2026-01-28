@@ -46,11 +46,33 @@ Demonstrates how to use the reflection system to get self-critique from agents:
 python examples/reflection_example.py
 ```
 
-### 5. `comprehensive_example.py`
-A comprehensive example showing all three agent types solving the same task:
+### 5. `rewoo_example.py`
+Demonstrates the ReWOO agent with parallel tool execution:
+- Basic usage for parallel tasks
+- Using placeholders for tool dependencies
+
+**Run:**
+```bash
+python examples/rewoo_example.py
+```
+
+### 6. `tot_example.py`
+Demonstrates the Tree-of-Thoughts agent for complex reasoning:
+- Multi-path exploration
+- Custom depth and branching parameters
+
+**Run:**
+```bash
+python examples/tot_example.py
+```
+
+### 7. `comprehensive_example.py`
+A comprehensive example showing multiple agent types solving the same task:
 - Plan-Build agent
 - ReAct agent
 - LLMCompiler agent
+- ReWOO agent
+- Tree-of-Thoughts agent
 
 This helps you understand the differences between agent approaches.
 

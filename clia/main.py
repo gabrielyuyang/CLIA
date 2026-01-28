@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .agents.history import History
 from .agents.memory import MemoryManager
+from .agents.chat_agent import chat_agent
 from .agents.plan_build_agent import plan_build
 from .agents.react_agent import react_agent
 from .agents.llm_compiler_agent import llm_compiler_agent
@@ -148,9 +149,9 @@ def parse_args() -> argparse.ArgumentParser:
         # Agent模式选择
         command_parser.add_argument(
             "--agent",
-            choices=["plan-build", "react", "llm-compiler", "rewoo", "tot"],
-            default="plan-build",
-            help="Agent architecture to use: 'plan-build' (default), 'react' (ReAct pattern), 'llm-compiler' (parallel execution), 'rewoo' (ReWOO pattern), or 'tot' (Tree-of-Thoughts)"
+            choices=["chat", "plan-build", "react", "llm-compiler", "rewoo", "tot"],
+            default="chat",
+            help="Agent architecture to use: 'chat' (default, direct Q&A), 'plan-build', 'react' (ReAct pattern), 'llm-compiler' (parallel execution), 'rewoo' (ReWOO pattern), or 'tot' (Tree-of-Thoughts)"
         )
 
         command_parser.add_argument(
@@ -274,7 +275,30 @@ def main():
 
         # 选择agent架构
         execution_metadata = None
-        if args.agent == "rewoo":
+        if args.agent == "chat":
+            logger.info("Using Chat agent architecture")
+            result = chat_agent(
+                question=question,
+                command=args.command,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds,
+                verbose=args.verbose,
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
+            )
+            if args.with_reflection:
+                full_response, execution_metadata = result
+            else:
+                full_response = result
+        elif args.agent == "rewoo":
             logger.info("Using ReWOO agent architecture")
             result = rewoo_agent(
                 question=question,

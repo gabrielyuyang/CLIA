@@ -1,17 +1,19 @@
 # CLIA: An Efficient Minimalist CLI AI Agent
 
-CLIA is a powerful command-line AI agent that implements multiple agent architectures (Plan-Build, ReAct, LLMCompiler, and Tree-of-Thoughts) to help developers with various coding tasks. It leverages OpenAI-compatible APIs to provide intelligent assistance with a focus on simplicity, efficiency, and flexibility.
+CLIA is a powerful command-line AI agent that implements multiple agent architectures (Chat, Plan-Build, ReAct, LLMCompiler, ReWOO, and Tree-of-Thoughts) to help developers with various coding tasks. It leverages OpenAI-compatible APIs to provide intelligent assistance with a focus on simplicity, efficiency, and flexibility.
 
 ## Features
 
 ### Multiple Agent Architectures
 
-- **Plan-Build Agent** (Default): Plans all steps upfront, then executes them sequentially. Best for predictable, well-defined tasks.
+- **Chat Agent** (Default): Direct Q&A for general tasks. Best for simple queries and conversations.
+- **Plan-Build Agent**: Plans all steps upfront, then executes them sequentially. Best for predictable, well-defined tasks.
 - **ReAct Agent**: Iterative reasoning-action-observation pattern. Adapts dynamically to results. Best for complex, exploratory tasks.
 - **LLMCompiler Agent**: Compiles tasks into a Directed Acyclic Graph (DAG) and executes independent steps in parallel. Best for tasks with parallelizable operations.
+- **ReWOO Agent**: Reasoning Without Observation. Generates a plan with tool placeholders and executes all tools in parallel.
 - **Tree-of-Thoughts Agent**: Explores multiple reasoning paths in parallel, evaluates them, and selects the best approach. Best for complex analysis, debugging, and multi-step problem-solving tasks.
 
-#### Notes: ReAct and LLMCompiler agents are experimental and may be deprecated in future versions.
+#### Notes: ReAct, LLMCompiler, and ReWOO agents are experimental and may be deprecated in future versions.
 
 ### Task Types
 
@@ -188,8 +190,11 @@ clia generate "Write a web scraper for news articles"
 
 #### Agent Selection
 
-- `--agent {plan-build,react,llm-compiler}` - Choose agent architecture (default: plan-build)
+- `--agent {chat,plan-build,react,llm-compiler,rewoo,tot}` - Choose agent architecture (default: chat)
 - `--max-iterations <int>` - Maximum iterations for ReAct agent (default: 10)
+- `--max-depth <int>` - Maximum depth for Tree-of-Thoughts agent (default: 3)
+- `--branching-factor <int>` - Branching factor for Tree-of-Thoughts agent (default: 3)
+- `--beam-width <int>` - Beam width for Tree-of-Thoughts agent (default: 2)
 
 #### Memory Management
 
@@ -358,11 +363,20 @@ CLIA provides the following built-in tools:
 - **`read_file`**: Read local files with size limits
   - Args: `path_str` (file path), `max_chars` (max characters, default: 4000)
 
+- **`write_file`**: Write content to a file (creates or overwrites) with optional backup
+  - Args: `path_str` (file path), `content` (content to write), `backup` (default: True)
+
+- **`shell`**: Execute shell command with timeout
+  - Args: `command` (shell command), `timeout` (default: 30.0), `cwd` (working directory)
+
 - **`echo`**: Echo text with size validation
-  - Args: `text` (text to echo), `max_chars` (max characters, default: 4000)
+  - Args: `text` (text to echo)
 
 - **`http_get`**: Perform HTTP GET requests with timeout handling
   - Args: `url` (target URL), `timeout` (timeout in seconds, default: 10.0)
+
+- **`fix_code`**: Advanced tool to fix code errors with optional test execution and iteration
+  - Args: `error_input`, `code_context`, `max_iterations`, `auto_run_tests`, etc.
 
 ### Reflection System
 
@@ -386,33 +400,34 @@ Reflection is agent-specific and analyzes:
 └──────┬──────┘
        │
        ▼
-┌─────────────────┐
-│  Agent Selection│
-│  (plan-build/   │
-│   react/llm-    │
-│   compiler/tot) │
-└──────┬──────────┘
+┌──────────────────┐
+│  Agent Selection │
+│  (chat/plan-build│
+│   react/rewoo/   │
+│   llm-compiler/  │
+│   tot)           │
+└──────┬───────────┘
        │
-       ├─────────────────┬──────────────────┬────────────────────┐
-       ▼                 ▼                  ▼                    ▼
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
-│ Plan-Build  │  │    ReAct    │  │ LLMCompiler  │  │ Tree-of-Thoughts │
-│   Agent     │  │    Agent    │  │    Agent     │  │      Agent       │
-└──────┬──────┘  └──────┬───────┘  └──────┬───────┘  └─────────┬────────┘
-       │                │                  │                    │
-       ▼                ▼                  ▼                    ▼
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
-│   Plan      │  │   Thought    │  │  DAG Plan    │  │  Multi-Path      │
-│   Steps     │  │   Action     │  │  Generation  │  │  Exploration     │
-└──────┬──────┘  └──────┬───────┘  └──────┬───────┘  └─────────┬────────┘
-       │                │                  │                    │
-       ▼                ▼                  ▼                    ▼
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
-│  Execute    │  │  Execute     │  │  Parallel    │  │  Beam Search     │
-│  Sequentially│  │  Iteratively │  │  Execution   │  │  Evaluation      │
-└──────┬──────┘  └──────┬───────┘  └──────┬───────┘  └─────────┬────────┘
-       │                │                  │                    │
-       └────────────────┴──────────────────┴────────────────────┘
+       ├───────────────┬──────────────┬───────────────┬───────────────┬────────────────┐
+       ▼               ▼              ▼               ▼               ▼                ▼
+┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│    Chat     │ │ Plan-Build  │ │   ReAct    │ │   ReWOO     │ │ LLMCompiler │ │    ToT      │
+│    Agent    │ │    Agent    │ │   Agent    │ │   Agent     │ │    Agent    │ │    Agent    │
+└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+       │               │              │               │               │                │
+       ▼               ▼              ▼               ▼               ▼                ▼
+┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│   Direct    │ │   Plan      │ │  Thought   │ │  Plan with  │ │  DAG Plan   │ │  Multi-Path │
+│   Response  │ │   Steps     │ │  Action    │ │  Placeholders│ │  Generation │ │  Exploration│
+└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+       │               │              │               │               │                │
+       ▼               ▼              ▼               ▼               ▼                ▼
+┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│   Synthesize│ │  Execute    │ │  Execute   │ │  Parallel   │ │  Parallel   │ │  Beam Search│
+│   Answer    │ │ Sequentially│ │ Iteratively│ │  Execution  │ │  Execution  │ │  Evaluation │
+└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+       │               │              │               │               │                │
+       └───────────────┴──────────────┴───────────────┴───────────────┴────────────────┘
                         │
                         ▼
               ┌─────────────────┐
@@ -490,6 +505,8 @@ clia/
 ├── clia/                       # Main package directory
 │   ├── agents/
 │   │   ├── __init__.py
+│   │   ├── chat_agent.py           # Direct Q&A agent
+│   │   ├── code_fixer.py           # Tool for fixing code errors
 │   │   ├── history.py              # Conversation history management
 │   │   ├── llm.py                  # LLM API interface
 │   │   ├── llm_compiler_agent.py   # LLMCompiler agent implementation
@@ -498,18 +515,23 @@ clia/
 │   │   ├── prompts.py              # Task-specific prompts
 │   │   ├── react_agent.py          # ReAct agent implementation
 │   │   ├── reflection.py           # Reflection and self-critique
+│   │   ├── rewoo_agent.py          # ReWOO agent implementation
 │   │   ├── tool_router.py          # Tool routing and execution
 │   │   ├── tot_agent.py            # Tree-of-Thoughts agent implementation
-│   │   └── tools.py                # Available tools (read_file, echo, http_get)
-│   ├── histories/                  # Conversation history storage (JSONL files)
-│   ├── memories/                   # Memory storage for short-term context (JSONL files)
+│   │   └── tools.py                # Available tools
+│   ├── docs/                       # Detailed agent documentation
+│   ├── histories/                  # Conversation history storage
+│   ├── memories/                   # Memory storage for short-term context
 │   ├── tests/                      # Test files
 │   ├── config.py                   # Configuration management
 │   ├── main.py                     # CLI entry point
 │   ├── utils.py                    # Utility functions
 │   └── __init__.py
-├── examples/                       # Example scripts
-│   └── react_example.py            # ReAct agent usage example
+├── examples/                       # Example scripts demonstrating usage
+│   ├── README.md
+│   ├── rewoo_example.py
+│   ├── tot_example.py
+│   └── ...
 ├── setup.py                        # Package setup configuration
 ├── requirements.txt                # Python dependencies
 └── README.md                       # This file
@@ -519,11 +541,12 @@ clia/
 
 Detailed documentation for each agent architecture is available:
 
-- **[Plan-Build Agent](PLAN_BUILD_AGENT.md)**: Two-phase planning and execution approach
-- **[ReAct Agent](REACT_AGENT.md)**: Iterative reasoning-action-observation pattern
-- **[LLMCompiler Agent](LLM_COMPILER_AGENT.md)**: DAG-based parallel execution
-- **[Tree-of-Thoughts Agent](TREE_OF_THOUGHTS_AGENT.md)**: Multi-path exploration and beam search
-- **[Reflection System](REFLECTION_AGENT.md)**: Self-critique and performance analysis
+- **[Plan-Build Agent](clia/docs/PLAN_BUILD_AGENT.md)**: Two-phase planning and execution approach
+- **[ReAct Agent](clia/docs/REACT_AGENT.md)**: Iterative reasoning-action-observation pattern
+- **[LLMCompiler Agent](clia/docs/LLM_COMPILER_AGENT.md)**: DAG-based parallel execution
+- **[ReWOO Agent](clia/docs/REWOO_AGENT.md)**: Reasoning Without Observation parallel execution
+- **[Tree-of-Thoughts Agent](clia/docs/TREE_OF_THOUGHTS_AGENT.md)**: Multi-path exploration and beam search
+- **[Reflection System](clia/docs/REFLECTION_AGENT.md)**: Self-critique and performance analysis
 
 ## Development
 
