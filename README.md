@@ -676,15 +676,18 @@ The `read_file` tool has a default 4000 character limit. Adjust in your code if 
 
 ## Comparison of Agent Architectures
 
-| Feature | Plan-Build | ReAct | LLMCompiler | Tree-of-Thoughts |
-|---------|-----------|-------|-------------|------------------|
-| Planning | Upfront, all steps | Iterative, step-by-step | DAG with dependencies | Multi-path with beam search |
-| Execution | Sequential | Iterative | Parallel where possible | Beam search evaluation |
-| Adaptability | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) | High (evaluates multiple paths) |
-| Complexity | Simple | Moderate | Complex | Most Complex |
-| Best For | Predictable tasks | Exploratory tasks | Parallelizable tasks | Complex analysis/debugging |
-| Max Steps/Iterations | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) | Configurable (default: 3 depth) |
-| Return Metadata | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
+| Feature | Chat | Plan-Build | ReAct | LLMCompiler | ReWOO | Tree-of-Thoughts |
+|---------|------|-----------|-------|-------------|-------|------------------|
+| Planning | None | Upfront, all steps | Iterative, step-by-step | DAG with dependencies | Upfront with placeholders | Multi-path with beam search |
+| Execution | Direct | Sequential | Iterative | Parallel where possible | Parallel (all tools) | Beam search evaluation |
+| Adaptability | None | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) | Low (fixed plan) | High (evaluates multiple paths) |
+| Complexity | Simplest | Simple | Moderate | Complex | Moderate | Most Complex |
+| Best For | Simple Q&A | Predictable tasks | Exploratory tasks | Parallelizable tasks | Independent operations | Complex analysis/debugging |
+| Max Steps/Iterations | 1 | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) | Unlimited (parallel) | Configurable (default: 3 depth) |
+| Tool Usage | None | Sequential | Iterative | Parallel with dependencies | Parallel independent | Parallel with evaluation |
+| Response Time | Fastest | Fast | Moderate | Moderate | Moderate | Slowest |
+| Return Metadata | No | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
+| Memory Support | Yes | Yes | Yes | Yes | Yes | Yes |
 
 ## License
 
