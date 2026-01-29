@@ -226,9 +226,10 @@ def main():
             logging.getLogger().setLevel(logging.DEBUG)
 
         # 如果不是quiet模式，显示欢迎信息
-        print("-" * 28)
-        print("Welcome to CLI AI Agent")
-        print("-" * 28 + "\n")
+        if not args.quiet:
+            print("-" * 28)
+            print("Welcome to CLI AI Agent")
+            print("-" * 28 + "\n")
 
         logger.info(f"User Query: {question}")
         logger.info(f"Command line arguments: {args}")
@@ -312,11 +313,8 @@ def main():
             )
             if args.with_reflection:
                 full_response, execution_metadata = result
-                full_response = [full_response]
             else:
                 full_response = result
-                if isinstance(full_response, str):
-                    full_response = [full_response]
         elif args.agent == "react":
             logger.info("Using ReAct agent architecture")
             result = react_agent(
@@ -362,12 +360,8 @@ def main():
             )
             if args.with_reflection:
                 full_response, execution_metadata = result
-                full_response = [full_response]
             else:
                 full_response = result
-                # LLMCompiler returns a string, wrap it in a list for consistency
-                if isinstance(full_response, str):
-                    full_response = [full_response]
         elif args.agent == "tot":
             logger.info("Using Tree-of-Thoughts agent architecture")
             result = tot_agent(
@@ -392,11 +386,8 @@ def main():
             )
             if args.with_reflection:
                 full_response, execution_metadata = result
-                full_response = [full_response]
             else:
                 full_response = result
-                if isinstance(full_response, str):
-                    full_response = [full_response]
         else:
             logger.info("Using Plan-Build agent architecture")
             result = plan_build(
@@ -418,18 +409,12 @@ def main():
             )
             if args.with_reflection:
                 full_response, execution_metadata = result
-                full_response = [full_response]
             else:
                 full_response = result
-                if isinstance(full_response, str):
-                    full_response = [full_response]
 
         # Print final agent output (non-streaming)
-        if not args.quiet and not stream:
-            if isinstance(full_response, list):
-                print("".join(full_response))
-            else:
-                print(str(full_response))
+        if not stream:
+            print(str(full_response))
 
         # Generate reflection if requested
         if args.with_reflection and execution_metadata:
@@ -437,11 +422,7 @@ def main():
             logger.info("Generating Reflection...")
             logger.info("=" * 60)
 
-            # Handle both string and list responses for final answer
-            if isinstance(full_response, list):
-                final_answer_str = "".join(full_response)
-            else:
-                final_answer_str = str(full_response)
+            final_answer_str = str(full_response)
 
             try:
                 if args.agent == "react":
@@ -556,11 +537,7 @@ def main():
 
         # 保存历史记录
         if args.history:
-            # Handle both string and list responses
-            if isinstance(full_response, list):
-                response_content = "".join(full_response)
-            else:
-                response_content = str(full_response)
+            response_content = str(full_response)
             history = History(
                 [
                     {"role": "user", "content": question},

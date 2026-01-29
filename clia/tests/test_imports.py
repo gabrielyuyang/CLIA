@@ -75,11 +75,13 @@ def test_imports():
         print("\n[ERROR] Import errors found:")
         for error in errors:
             print(f"  - {error}")
-        return False
+        assert False, f"Import errors found: {len(errors)}"
     else:
         print("\n[SUCCESS] All imports successful!")
-        return True
 
 if __name__ == "__main__":
-    success = test_imports()
-    sys.exit(0 if success else 1)
+    try:
+        test_imports()
+        sys.exit(0)
+    except AssertionError:
+        sys.exit(1)

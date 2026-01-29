@@ -174,7 +174,8 @@ class TestToTAgentFunctions(unittest.TestCase):
             content="We should read the file 'test.txt' to get more information",
             depth=1,
             parent_id="parent_1",
-            score=0.8
+            score=0.8,
+            action={"tool": "read_file", "args": {"path_str": "test.txt", "max_chars": 1000}}
         )
 
         result = _execute_thought_action(thought, **self.api_params)

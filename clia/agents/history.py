@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class History:
-    def __init__(self, messages: Message = []) -> None:
-        self._messages: Message = messages
+    def __init__(self, messages: Message | None = None) -> None:
+        self._messages: Message = list(messages) if messages else []
 
     def save_jsonl(self, path: Path) -> None:
         if not self._messages:

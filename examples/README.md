@@ -119,7 +119,7 @@ You can modify these examples to:
 ## See Also
 
 - [Main README](../README.md) - Complete CLIA documentation
-- [Plan-Build Agent Docs](../PLAN_BUILD_AGENT.md) - Detailed Plan-Build documentation
-- [ReAct Agent Docs](../REACT_AGENT.md) - Detailed ReAct documentation
-- [LLMCompiler Agent Docs](../LLM_COMPILER_AGENT.md) - Detailed LLMCompiler documentation
-- [Reflection System Docs](../REFLECTION_AGENT.md) - Detailed reflection documentation
+- [Plan-Build Agent Docs](../clia/docs/PLAN_BUILD_AGENT.md) - Detailed Plan-Build documentation
+- [ReAct Agent Docs](../clia/docs/REACT_AGENT.md) - Detailed ReAct documentation
+- [LLMCompiler Agent Docs](../clia/docs/LLM_COMPILER_AGENT.md) - Detailed LLMCompiler documentation
+- [Reflection System Docs](../clia/docs/REFLECTION_AGENT.md) - Detailed reflection documentation

@@ -3,6 +3,7 @@ from typing import Optional
 import httpx
 import subprocess
 import shutil
+import re
 
 
 def read_file_safe(path_str: str, max_chars: int = 4000) -> str:
@@ -11,10 +12,20 @@ def read_file_safe(path_str: str, max_chars: int = 4000) -> str:
     if not path.exists() or not path.is_file():
         return f"[File {path_str} not found]"
     with path.open('r', encoding='utf-8', errors='replace') as f:
-        content = f.read()
-        if len(content) > max_chars:
-            return f"[File {path_str} is too large]"
-        return content
+        chunks = []
+        total = 0
+        while True:
+            remaining = max_chars - total + 1
+            if remaining <= 0:
+                return f"[File {path_str} is too large]"
+            data = f.read(min(4096, remaining))
+            if not data:
+                break
+            total += len(data)
+            if total > max_chars:
+                return f"[File {path_str} is too large]"
+            chunks.append(data)
+        return "".join(chunks)
 
 
 def echo_safe(text: str, max_chars: int = 4000) -> str:
@@ -66,6 +77,8 @@ def write_file_safe(path_str: str, content: str, backup: bool = True) -> str:
 
 def shell_exec(command: str, timeout: float = 30.0, cwd: Optional[str] = None) -> str:
     "Execute shell command with timeout"
+    if not _is_command_safe(command):
+        return "[Command blocked by safety policy]"
     try:
         result = subprocess.run(
             command,
@@ -81,3 +94,13 @@ def shell_exec(command: str, timeout: float = 30.0, cwd: Optional[str] = None) -
         return f"[Command timeout after {timeout}s]"
     except Exception as e:
         return f"[Shell execution error: {e}]"
+
+
+def _is_command_safe(command: str) -> bool:
+    if not command or not isinstance(command, str):
+        return False
+    if re.search(r"[;&|`$<>]", command):
+        return False
+    if re.search(r"\b(rm|del|erase|format|shutdown|reboot|mkfs|dd|powershell|cmd)\b", command, re.IGNORECASE):
+        return False
+    return True

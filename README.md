@@ -179,7 +179,7 @@ clia generate "Write a web scraper for news articles"
 #### Output Control
 
 - `--stream` - Enable streaming output
-- `--quiet` - Suppress non-essential output
+- `--quiet` - Suppress all logging output (forces non-streaming output)
 - `--output-format {markdown,json,text}` - Set output format (default: markdown)
 
 #### Logging & History

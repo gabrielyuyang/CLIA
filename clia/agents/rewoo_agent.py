@@ -9,7 +9,7 @@ ReWOO (Reasoning WithOut Observation) is an agent pattern that:
 Key difference: Plans WITHOUT seeing intermediate observations, enabling full parallelization.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set, Any
 import json
 import re
 import logging
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 PLAN_PATTERN = re.compile(r"```json\s*(\[.*?\])\s*```", re.DOTALL)
 PLAN_PATTERN_SIMPLE = re.compile(r"\[.*?\]", re.DOTALL)
+PLACEHOLDER_PATTERN = re.compile(r"#E\d+")
 
 
 def _extract_plan(response: str) -> List[Dict]:
@@ -129,35 +130,87 @@ def _planner(question: str, command: str, api_key: str, base_url: str, max_retri
     return _extract_plan(response)
 
 
+def _extract_placeholders(value: Any) -> Set[str]:
+    placeholders: Set[str] = set()
+    if isinstance(value, str):
+        placeholders.update(PLACEHOLDER_PATTERN.findall(value))
+        return placeholders
+    if isinstance(value, dict):
+        for item in value.values():
+            placeholders.update(_extract_placeholders(item))
+        return placeholders
+    if isinstance(value, list):
+        for item in value:
+            placeholders.update(_extract_placeholders(item))
+        return placeholders
+    return placeholders
+
+
+def _resolve_placeholders(value: Any, results: Dict[str, str]) -> Any:
+    if isinstance(value, str):
+        resolved = value
+        for placeholder in PLACEHOLDER_PATTERN.findall(value):
+            if placeholder in results:
+                resolved = resolved.replace(placeholder, results[placeholder])
+        return resolved
+    if isinstance(value, dict):
+        return {k: _resolve_placeholders(v, results) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_placeholders(v, results) for v in value]
+    return value
+
+
 def _worker(plan: List[Dict]) -> Dict[str, str]:
-    """Execute all tool calls in parallel."""
-    results = {}
+    """Execute tool calls with dependency-aware staging."""
+    results: Dict[str, str] = {}
     tool_steps = [s for s in plan if s.get("tool")]
+    if not tool_steps:
+        return results
+
+    plan_ids = {s.get("id") for s in tool_steps if s.get("id")}
+    pending = {s.get("id"): s for s in tool_steps if s.get("id")}
 
     def execute_step(step: Dict) -> Tuple[str, str]:
         step_id = step.get("id", "unknown")
         tool_name = step.get("tool")
-
         if tool_name not in TOOLS:
             return (step_id, f"Error: Unknown tool '{tool_name}'")
-
         tool_args = step.get("args", {})
+        resolved_args = _resolve_placeholders(tool_args, results)
         try:
-            result = run_tool(tool_name, **tool_args)
+            result = run_tool(tool_name, **resolved_args)
             logger.debug(f"Step {step_id} completed")
             return (step_id, result)
         except Exception as e:
             logger.error(f"Step {step_id} failed: {e}")
             return (step_id, f"Error: {str(e)}")
 
-    if not tool_steps:
-        return {}
+    while pending:
+        executable = []
+        for step_id, step in pending.items():
+            tool_args = step.get("args", {})
+            deps = set(step.get("dependencies", []) or [])
+            deps.update(_extract_placeholders(tool_args))
+            deps = {d for d in deps if d in plan_ids}
+            if deps.issubset(results.keys()):
+                executable.append(step)
 
-    with ThreadPoolExecutor(max_workers=max(1, min(len(tool_steps), 10))) as executor:
-        futures = {executor.submit(execute_step, step): step for step in tool_steps}
-        for future in as_completed(futures):
-            step_id, result = future.result()
-            results[step_id] = result
+        if not executable:
+            for step_id, step in pending.items():
+                tool_args = step.get("args", {})
+                deps = set(step.get("dependencies", []) or [])
+                deps.update(_extract_placeholders(tool_args))
+                deps = {d for d in deps if d in plan_ids}
+                missing = sorted(list(deps - results.keys()))
+                results[step_id] = f"Error: Unresolved dependencies {missing}"
+            break
+
+        with ThreadPoolExecutor(max_workers=max(1, min(len(executable), 10))) as executor:
+            futures = {executor.submit(execute_step, step): step for step in executable}
+            for future in as_completed(futures):
+                step_id, result = future.result()
+                results[step_id] = result
+                pending.pop(step_id, None)
 
     return results
 

@@ -8,7 +8,7 @@ ReAct (Reasoning + Acting) is an iterative agent pattern where the agent:
 4. Repeats until the task is complete
 """
 
-from typing import Dict, List
+from typing import Dict
 import json
 import re
 import logging
@@ -107,7 +107,7 @@ def react_agent(
     verbose: bool = False,
     return_metadata: bool = False,
     memory_manager = None
-) -> List[str]:
+) -> str:
     """
     Run a ReAct agent to solve a task.
 
@@ -128,8 +128,8 @@ def react_agent(
         verbose: Whether to print intermediate steps
 
     Returns:
-        List of response strings (for streaming compatibility)
-        If return_metadata is True, returns tuple of (response_list, metadata_dict)
+        Response string
+        If return_metadata is True, returns tuple of (response, metadata_dict)
     """
     system_prompt = _build_react_prompt(command)
 
@@ -191,7 +191,7 @@ def react_agent(
             )
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
-            return [f"Error: Failed to get response from LLM: {e}"]
+            return f"Error: Failed to get response from LLM: {e}"
 
         if verbose:
             print(f"\n[Agent Response]\n{response}\n")
@@ -292,12 +292,12 @@ def react_agent(
             else:
                 full_response.append("I've reached the maximum number of iterations. Please refine your question or try again.")
 
-    response = full_response if full_response else ["No response generated"]
+    response = "".join(full_response) if full_response else "No response generated"
 
     # Save to memory if memory manager is available
     if memory_manager:
         try:
-            final_answer_str = "".join(response) if isinstance(response, list) else str(response)
+            final_answer_str = response
             memory_manager.add_memory(
                 question=question,
                 answer=final_answer_str,
@@ -312,7 +312,7 @@ def react_agent(
             logger.warning(f"Failed to save memory: {e}")
 
     if return_metadata:
-        final_answer_str = "".join(response) if isinstance(response, list) else str(response)
+        final_answer_str = response
         metadata = {
             "conversation_history": conversation_history,
             "iterations_used": iteration + 1,
@@ -344,7 +344,7 @@ def react_agent_simple(
 
     This is a convenience wrapper around react_agent for non-streaming use cases.
     """
-    responses = react_agent(
+    response = react_agent(
         question=question,
         command=command,
         max_iterations=max_iterations,
@@ -360,4 +360,4 @@ def react_agent_simple(
         timeout=timeout,
         verbose=False
     )
-    return "\n".join(responses)
+    return response

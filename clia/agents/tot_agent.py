@@ -61,13 +61,14 @@ Score each thought on quality (0.0-1.0) based on:
 - Progress: Does it move toward a solution?
 
 ### Tool Integration:
-If a thought suggests using a tool, it will be executed and results incorporated.
+If a thought needs a tool, include a structured action object.
 
 ## Rules:
 1. Be creative and explore diverse approaches
 2. Evaluate thoughts objectively
 3. Only use tools listed above
 4. Focus on debugging and analysis tasks
+5. If a tool is needed, include a structured action with "tool" and "args"
 
 Let's begin!"""
 
@@ -109,7 +110,7 @@ Each thought should represent a different approach or perspective.
 
 Respond with a JSON array:
 [
-    {{"thought": "First approach description"}},
+    {{"thought": "First approach description", "action": {{"tool": "read_file", "args": {{"path_str": "a.py", "max_chars": 1000}}}}}},
     {{"thought": "Second approach description"}},
     ...
 ]"""
@@ -141,13 +142,15 @@ Respond with a JSON array:
             thoughts = []
             for i, item in enumerate(thoughts_data):
                 thought_content = item.get("thought", "")
+                action = item.get("action")
                 if thought_content:
                     thought = Thought(
                         id=f"thought_{depth}_{i}_{uuid.uuid4().hex[:8]}",
                         content=thought_content,
                         depth=depth,
                         parent_id=current_state[-1][0] if current_state else None,
-                        score=0.0  # Will be evaluated next
+                        score=0.0,
+                        action=action if isinstance(action, dict) else None
                     )
                     thoughts.append(thought)
             return thoughts
@@ -254,28 +257,16 @@ def _execute_thought_action(
     timeout: float
 ) -> Optional[str]:
     """Execute any tool action suggested by the thought."""
-    # For simplicity, we'll check if the thought content suggests a tool
-    # In a more advanced implementation, we could parse structured tool suggestions
-
-    # Look for tool-like patterns in the thought
-    thought_lower = thought.content.lower()
-
-    # Simple heuristic: if thought mentions a tool, try to execute it
-    # This is a placeholder - in practice, you'd want more structured parsing
-    if "read" in thought_lower and ("file" in thought_lower or ".txt" in thought_lower or ".py" in thought_lower):
-        # Try to extract a filename
-        import re
-        filename_match = re.search(r'[\'\"]([^\'\"]+\.(?:txt|py|json|md))[\'\"]', thought.content)
-        if filename_match:
-            filename = filename_match.group(1)
-            try:
-                result = run_tool("read_file", path_str=filename, max_chars=1000)
-                return result
-            except Exception as e:
-                return f"Error reading file: {e}"
-
-    # No actionable tool suggestion found
-    return None
+    if not thought.action:
+        return None
+    tool_name = thought.action.get("tool")
+    tool_args = thought.action.get("args", {})
+    if not tool_name or not isinstance(tool_args, dict):
+        return "Error: Invalid tool action format"
+    try:
+        return run_tool(tool_name, **tool_args)
+    except Exception as e:
+        return f"Error executing tool {tool_name}: {e}"
 
 def _search_tree(
     question: str,
