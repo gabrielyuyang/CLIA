@@ -14,6 +14,7 @@ from .plan_build_agent import plan_build
 from .llm_compiler_agent import llm_compiler_agent, llm_compiler_agent_simple
 from .rewoo_agent import rewoo_agent
 from .tot_agent import tot_agent, tot_agent_simple
+from .babyagi_agent import babyagi_agent
 from .reflection import (
     AgentReflection,
     reflect_on_execution,
@@ -38,6 +39,7 @@ __all__ = [
     "rewoo_agent",
     "tot_agent",
     "tot_agent_simple",
+    "babyagi_agent",
     "AgentReflection",
     "reflect_on_execution",
     "reflect_react_agent",

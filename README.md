@@ -12,6 +12,7 @@ CLIA is a powerful command-line AI agent that implements multiple agent architec
 - **LLMCompiler Agent**: Compiles tasks into a Directed Acyclic Graph (DAG) and executes independent steps in parallel. Best for tasks with parallelizable operations.
 - **ReWOO Agent**: Reasoning Without Observation. Generates a plan with tool placeholders and executes all tools in parallel.
 - **Tree-of-Thoughts Agent**: Explores multiple reasoning paths in parallel, evaluates them, and selects the best approach. Best for complex analysis, debugging, and multi-step problem-solving tasks.
+- **BabyAGI Agent**: Iterative task generation and execution loop that expands a task list based on intermediate results.
 
 #### Notes: ReAct, LLMCompiler, and ReWOO agents are experimental and may be deprecated in future versions.
 
@@ -332,6 +333,16 @@ Observation: [tool result]
 Final Answer: [final response]
 ```
 
+#### BabyAGI Agent
+
+The BabyAGI agent uses a task generation loop to create and execute follow-up tasks based on intermediate results.
+
+1. **Generate**: Propose new tasks with priorities
+2. **Execute**: Run the highest-priority task
+3. **Iterate**: Add new tasks until the list is exhausted or iteration limit reached
+
+**Best for**: Long-running tasks that can be decomposed into iterative sub-tasks
+
 #### Tree-of-Thoughts Agent
 
 The Tree-of-Thoughts (ToT) agent explores multiple reasoning paths in parallel, evaluates them, and selects the best approach to solve complex tasks.
@@ -403,29 +414,29 @@ Reflection is agent-specific and analyzes:
 │  (chat/plan-build│
 │   react/rewoo/   │
 │   llm-compiler/  │
-│   tot)           │
+│   babyagi/tot)   │
 └──────┬───────────┘
        │
-       ├───────────────┬──────────────┬───────────────┬───────────────┬────────────────┐
-       ▼               ▼              ▼               ▼               ▼                ▼
-┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│    Chat     │ │ Plan-Build  │ │   ReAct    │ │   ReWOO     │ │ LLMCompiler │ │    ToT      │
-│    Agent    │ │    Agent    │ │   Agent    │ │   Agent     │ │    Agent    │ │    Agent    │
-└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-       │               │              │               │               │                │
-       ▼               ▼              ▼               ▼               ▼                ▼
-┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│   Direct    │ │   Plan      │ │  Thought   │ │  Plan with  │ │  DAG Plan   │ │  Multi-Path │
-│   Response  │ │   Steps     │ │  Action    │ │  Placeholders│ │  Generation │ │  Exploration│
-└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-       │               │              │               │               │                │
-       ▼               ▼              ▼               ▼               ▼                ▼
-┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│   Synthesize│ │  Execute    │ │  Execute   │ │  Parallel   │ │  Parallel   │ │  Beam Search│
-│   Answer    │ │ Sequentially│ │ Iteratively│ │  Execution  │ │  Execution  │ │  Evaluation │
-└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-       │               │              │               │               │                │
-       └───────────────┴──────────────┴───────────────┴───────────────┴────────────────┘
+       ├───────────────┬──────────────┬───────────────┬───────────────┬──────────────┬────────────────┐
+       ▼               ▼              ▼               ▼               ▼              ▼                ▼
+┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐
+│    Chat     │ │ Plan-Build  │ │   ReAct    │ │   ReWOO     │ │ LLMCompiler │ │  BabyAGI   │ │    ToT      │
+│    Agent    │ │    Agent    │ │   Agent    │ │   Agent     │ │    Agent    │ │   Agent    │ │    Agent    │
+└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘
+       │               │              │               │               │              │               │
+       ▼               ▼              ▼               ▼               ▼              ▼               ▼
+┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐
+│   Direct    │ │   Plan      │ │  Thought   │ │  Plan with  │ │  DAG Plan   │ │ Task List  │ │  Multi-Path │
+│   Response  │ │   Steps     │ │  Action    │ │  Placeholders│ │  Generation │ │ Generation │ │  Exploration│
+└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘
+       │               │              │               │               │              │               │
+       ▼               ▼              ▼               ▼               ▼              ▼               ▼
+┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌─────────────┐
+│   Synthesize│ │  Execute    │ │  Execute   │ │  Parallel   │ │  Parallel   │ │ Execute    │ │  Beam Search│
+│   Answer    │ │ Sequentially│ │ Iteratively│ │  Execution  │ │  Execution  │ │ Task Loop  │ │  Evaluation │
+└──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘ └──────┬──────┘ └──────┬─────┘ └──────┬──────┘
+       │               │              │               │               │              │               │
+       └───────────────┴──────────────┴───────────────┴───────────────┴──────────────┴───────────────┴────────────────┘
                         │
                         ▼
               ┌─────────────────┐
@@ -496,6 +507,7 @@ clia/
 │   ├── agents/
 │   │   ├── __init__.py
 │   │   ├── chat_agent.py           # Direct Q&A agent
+│   │   ├── babyagi_agent.py         # BabyAGI task loop agent
 │   │   ├── code_fixer.py           # Tool for fixing code errors
 │   │   ├── history.py              # Conversation history management
 │   │   ├── llm.py                  # LLM API interface
@@ -636,6 +648,7 @@ response = plan_build(
 ```
 
 See `examples/react_example.py` for a complete example.
+See `examples/babyagi_example.py` for a BabyAGI task loop example.
 
 ## Troubleshooting
 
@@ -666,18 +679,18 @@ The `read_file` tool has a default 4000 character limit. Adjust in your code if 
 
 ## Comparison of Agent Architectures
 
-| Feature | Chat | Plan-Build | ReAct | LLMCompiler | ReWOO | Tree-of-Thoughts |
-|---------|------|-----------|-------|-------------|-------|------------------|
-| Planning | None | Upfront, all steps | Iterative, step-by-step | DAG with dependencies | Upfront with placeholders | Multi-path with beam search |
-| Execution | Direct | Sequential | Iterative | Parallel where possible | Parallel (all tools) | Beam search evaluation |
-| Adaptability | None | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) | Low (fixed plan) | High (evaluates multiple paths) |
-| Complexity | Simplest | Simple | Moderate | Complex | Moderate | Most Complex |
-| Best For | Simple Q&A | Predictable tasks | Exploratory tasks | Parallelizable tasks | Independent operations | Complex analysis/debugging |
-| Max Steps/Iterations | 1 | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) | Unlimited (parallel) | Configurable (default: 3 depth) |
-| Tool Usage | None | Sequential | Iterative | Parallel with dependencies | Parallel independent | Parallel with evaluation |
-| Response Time | Fastest | Fast | Moderate | Moderate | Moderate | Slowest |
-| Return Metadata | No | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
-| Memory Support | Yes | Yes | Yes | Yes | Yes | Yes |
+| Feature | Chat | Plan-Build | ReAct | LLMCompiler | ReWOO | BabyAGI | Tree-of-Thoughts |
+|---------|------|-----------|-------|-------------|-------|---------|------------------|
+| Planning | None | Upfront, all steps | Iterative, step-by-step | DAG with dependencies | Upfront with placeholders | Task list with priorities | Multi-path with beam search |
+| Execution | Direct | Sequential | Iterative | Parallel where possible | Parallel (all tools) | Iterative task loop | Beam search evaluation |
+| Adaptability | None | Low (fixed plan) | High (reacts to observations) | Medium (fixed DAG) | Low (fixed plan) | Medium (replans tasks) | High (evaluates multiple paths) |
+| Complexity | Simplest | Simple | Moderate | Complex | Moderate | Moderate | Most Complex |
+| Best For | Simple Q&A | Predictable tasks | Exploratory tasks | Parallelizable tasks | Independent operations | Task decomposition | Complex analysis/debugging |
+| Max Steps/Iterations | 1 | Configurable (default: 5) | Configurable (default: 10) | Unlimited (DAG-based) | Unlimited (parallel) | Configurable (default: 10) | Configurable (default: 3 depth) |
+| Tool Usage | None | Sequential | Iterative | Parallel with dependencies | Parallel independent | Iterative tool calls | Parallel with evaluation |
+| Response Time | Fastest | Fast | Moderate | Moderate | Moderate | Moderate | Slowest |
+| Return Metadata | No | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) | Supported (for reflection) |
+| Memory Support | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 
 ## License
 

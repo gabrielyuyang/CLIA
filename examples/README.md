@@ -66,7 +66,17 @@ Demonstrates the Tree-of-Thoughts agent for complex reasoning:
 python examples/tot_example.py
 ```
 
-### 7. `comprehensive_example.py`
+### 7. `babyagi_example.py`
+Demonstrates the BabyAGI agent with task generation and execution loops:
+- Generates follow-up tasks with priorities
+- Executes tasks iteratively until completion
+
+**Run:**
+```bash
+python examples/babyagi_example.py
+```
+
+### 8. `comprehensive_example.py`
 A comprehensive example showing multiple agent types solving the same task:
 - Plan-Build agent
 - ReAct agent

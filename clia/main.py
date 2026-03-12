@@ -11,6 +11,7 @@ from .agents.react_agent import react_agent
 from .agents.llm_compiler_agent import llm_compiler_agent
 from .agents.rewoo_agent import rewoo_agent
 from .agents.tot_agent import tot_agent
+from .agents.babyagi_agent import babyagi_agent
 from .agents.reflection import (
     reflect_react_agent,
     reflect_llm_compiler_agent,
@@ -140,9 +141,9 @@ def parse_args() -> argparse.ArgumentParser:
         # Agent模式选择
         command_parser.add_argument(
             "--agent",
-            choices=["chat", "plan-build", "react", "llm-compiler", "rewoo", "tot"],
+            choices=["chat", "plan-build", "react", "llm-compiler", "rewoo", "tot", "babyagi"],
             default="chat",
-            help="Agent architecture to use: 'chat' (default, direct Q&A), 'plan-build', 'react' (ReAct pattern), 'llm-compiler' (parallel execution), 'rewoo' (ReWOO pattern), or 'tot' (Tree-of-Thoughts)"
+            help="Agent architecture to use: 'chat' (default, direct Q&A), 'plan-build', 'react' (ReAct pattern), 'llm-compiler' (parallel execution), 'rewoo' (ReWOO pattern), 'tot' (Tree-of-Thoughts), or 'babyagi' (task-loop pattern)"
         )
 
         command_parser.add_argument(
@@ -381,6 +382,29 @@ def main():
                 max_tokens=settings.max_tokens,
                 timeout=settings.timeout_seconds,
                 verbose=args.verbose,
+                return_metadata=args.with_reflection,
+                memory_manager=memory_manager
+            )
+            if args.with_reflection:
+                full_response, execution_metadata = result
+            else:
+                full_response = result
+        elif args.agent == "babyagi":
+            logger.info("Using BabyAGI agent architecture")
+            result = babyagi_agent(
+                question=question,
+                command=args.command,
+                max_iterations=args.max_iterations,
+                api_key=settings.api_key,
+                base_url=settings.base_url,
+                max_retries=max_retries,
+                model=model,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=settings.frequency_penalty,
+                max_tokens=settings.max_tokens,
+                timeout=settings.timeout_seconds,
                 return_metadata=args.with_reflection,
                 memory_manager=memory_manager
             )

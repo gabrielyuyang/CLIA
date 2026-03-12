@@ -24,3 +24,9 @@ __pycache__/
 *.swo
 *.swn
 *.swnb
+.claude/
+.codex/
+.factory/
+.opencode/
+.specify/
+openspec/

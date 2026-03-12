@@ -26,11 +26,11 @@ def test_imports():
         errors.append(f"react_agent import failed: {e}")
     
     try:
-        from clia.agents.llm_compiler_agent import llm_compiler_agent
-        print("[OK] llm_compiler_agent import successful")
+        from clia.agents.babyagi_agent import babyagi_agent
+        print("[OK] babyagi_agent import successful")
     except Exception as e:
-        errors.append(f"llm_compiler_agent import failed: {e}")
-    
+        errors.append(f"babyagi_agent import failed: {e}")
+
     try:
         from clia.agents.reflection import (
             reflect_react_agent,
